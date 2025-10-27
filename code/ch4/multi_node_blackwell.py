@@ -1,30 +1,9 @@
 """
 Multi-Node Distributed Training for Blackwell GPUs
 
-This module demonstrates multi-node distributed training optimizations
-specifically for Blackwell B200/B300 GPUs with NVLink-C2C and NVSwitch.
-
-Key Features:
-- NCCL optimization for Blackwell
-- NVLink-C2C bandwidth utilization
-- Multi-node tensor parallelism
-- Distributed data parallelism with FSDP
-- Gradient compression for inter-node
-- Overlap communication and computation
-
-Hardware Requirements:
-- 2+ nodes with Blackwell B200/B300
-- NVLink-C2C or NVSwitch fabric
-- High-speed inter-node network (InfiniBand, RoCE)
-- NCCL 2.20+
-
-Performance:
-- Intra-node: 900 GB/s (NVLink-C2C)
-- Inter-node: 400 GB/s (8x 50GbE or 2x 200GbE)
-- Scaling efficiency: >85% up to 8 nodes
-
-Author: AI Performance Engineering Team
-Date: October 2025
+Demonstrates multi-node distributed training optimizations for Blackwell
+B200/B300 GPUs with NVLink-C2C and NCCL. Includes tensor parallelism,
+FSDP, and gradient compression for multi-node scaling.
 """
 
 import os
@@ -52,18 +31,9 @@ def setup_blackwell_distributed(
     backend: str = "nccl",
     init_method: str = "env://",
 ) -> Tuple[int, int, int, int]:
-    """
-    Initialize distributed environment optimized for Blackwell.
+    """Initialize distributed environment optimized for Blackwell.
     
-    Environment variables expected:
-    - RANK: Global rank of this process
-    - LOCAL_RANK: Rank within this node
-    - WORLD_SIZE: Total number of processes
-    - MASTER_ADDR: Address of rank 0
-    - MASTER_PORT: Port for rank 0
-    
-    Returns:
-        (rank, local_rank, world_size, local_world_size)
+    Returns: (rank, local_rank, world_size, local_world_size)
     """
     # Get environment variables
     rank = int(os.environ.get("RANK", 0))
@@ -132,14 +102,7 @@ def setup_blackwell_distributed(
 # ============================================================================
 
 class MultiNodeTransformerBlock(nn.Module):
-    """
-    Transformer block optimized for multi-node training.
-    
-    Uses hybrid parallelism:
-    - Tensor Parallelism (TP) within nodes (via NVLink-C2C)
-    - Data Parallelism (DP) across nodes (via InfiniBand)
-    - FSDP for memory efficiency
-    """
+    """Transformer block with hybrid parallelism for multi-node training."""
     
     def __init__(
         self,

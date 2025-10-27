@@ -1,17 +1,9 @@
 """
-OPTIMIZED FlexAttention for Blackwell B200
-==========================================
+Optimized FlexAttention for Blackwell B200
 
-This demonstrates the CORRECT way to use FlexAttention for 2x+ speedup.
-
-CRITICAL LEARNING: FlexAttention MUST be wrapped with torch.compile!
-Without compilation, it materializes the full attention matrix (SLOW).
-With compilation, it generates a fused kernel (FAST - 2x+ speedup).
-
-Performance Target: 2-3x speedup over baseline SDPA
-
-Author: AI Performance Engineering Team
-Hardware: NVIDIA B200 (SM 10.0)
+Demonstrates correct FlexAttention usage with torch.compile for optimal
+performance. FlexAttention must be compiled to generate fused kernels;
+without compilation it materializes the full attention matrix.
 """
 
 import torch
@@ -49,10 +41,7 @@ class BaselineAttention(nn.Module):
 
 
 class FlexAttentionWRONG(nn.Module):
-    """
-    WRONG: Not compiled - materializes full matrix
-    This will be SLOWER than baseline!
-    """
+    """Wrong: Not compiled - materializes full matrix and will be slower."""
     def __init__(self, window_size=2048):
         super().__init__()
         self.window_size = window_size
@@ -71,17 +60,12 @@ class FlexAttentionWRONG(nn.Module):
 
 
 class FlexAttentionCORRECT(nn.Module):
-    """
-    CORRECT: Wrap entire module with torch.compile
-    This generates a fused kernel - 2x+ faster!
-    """
+    """Correct: Wrapped with torch.compile to generate fused kernel."""
     def __init__(self, window_size=2048):
         super().__init__()
         self.window_size = window_size
         
     def forward(self, Q, K, V):
-        # Use plain flex_attention without block_mask to avoid torch.compile() tracing issues
-        # The compiled version will still generate optimized kernel
         return flex_attention(Q, K, V)
 
 

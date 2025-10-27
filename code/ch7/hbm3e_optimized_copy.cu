@@ -175,7 +175,7 @@ void run_benchmarks() {
     printf("Compute Capability: %d.%d\n", prop.major, prop.minor);
     
     if (prop.major == 10 && prop.minor == 0) {
-        printf("✓ Blackwell B200/B300 detected (HBM3e)\n");
+        printf("Blackwell B200/B300 detected (HBM3e)\n");
         printf("  Peak bandwidth: ~8 TB/s\n");
         printf("  Target: >7.8 TB/s (>95%% utilization)\n");
     } else {

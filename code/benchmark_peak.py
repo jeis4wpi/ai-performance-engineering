@@ -1,18 +1,8 @@
 """
-COMPREHENSIVE PEAK PERFORMANCE VALIDATION
-==========================================
+Comprehensive Peak Performance Validation
 
-This benchmark suite validates that we're achieving PEAK performance
-on Blackwell B200 for all optimization techniques.
-
-Targets:
-- HBM3e Bandwidth: >7.0 TB/s (90%+ of 7.8 TB/s peak)
-- torch.compile: 1.3-1.5x speedup
-- FlexAttention: 2.0x+ speedup
-- FP16 Compute: >1000 TFLOPS
-
-Author: AI Performance Engineering Team
-Hardware: NVIDIA B200 (SM 10.0)
+Benchmark suite for validating peak performance on Blackwell B200.
+Tests HBM3e bandwidth, torch.compile speedup, FlexAttention, and FP16 compute.
 """
 
 import torch
@@ -81,10 +71,7 @@ def configure_peak_performance():
 
 
 def benchmark_hbm3e_bandwidth_peak():
-    """
-    Benchmark HBM3e bandwidth with OPTIMAL access patterns
-    Target: >7.0 TB/s (90%+ of peak)
-    """
+    """Benchmark HBM3e bandwidth with optimal access patterns."""
     print("=" * 80)
     print("TEST 1: HBM3e Bandwidth (Peak Performance)")
     print("=" * 80)
@@ -145,10 +132,7 @@ def benchmark_hbm3e_bandwidth_peak():
 
 
 def benchmark_fp16_peak_compute():
-    """
-    Benchmark FP16 compute throughput
-    Target: >1000 TFLOPS
-    """
+    """Benchmark FP16 compute throughput."""
     print("\n" + "=" * 80)
     print("TEST 2: FP16 Compute Throughput (Peak Performance)")
     print("=" * 80)

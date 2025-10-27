@@ -1,20 +1,8 @@
 """
-PROPERLY OPTIMIZED torch.compile for Blackwell B200
-===================================================
+Optimized torch.compile for Blackwell B200
 
-This demonstrates the CORRECT way to use torch.compile for maximum performance.
-
-Key Learnings:
-1. Warmup is CRITICAL (100+ iterations)
-2. TF32 must be enabled properly
-3. Inductor config matters
-4. fullgraph=True for best performance
-5. dynamic=False for consistent shapes
-
-Performance Target: 1.3-1.5x speedup over eager mode
-
-Author: AI Performance Engineering Team
-Hardware: NVIDIA B200 (SM 10.0)
+Demonstrates torch.compile configuration for optimal performance on Blackwell.
+Includes proper warmup, TF32 settings, and Inductor configuration.
 """
 
 import torch
@@ -24,55 +12,37 @@ import os
 
 
 def configure_for_blackwell_peak_performance():
-    """
-    CRITICAL: Proper configuration for Blackwell B200
-    
-    These settings are REQUIRED for peak performance!
-    """
+    """Proper configuration for Blackwell B200 peak performance."""
     print("=" * 80)
     print("Configuring PyTorch for Blackwell B200 Peak Performance")
     print("=" * 80)
     
-    # 1. Enable TF32 (PyTorch 2.9 new API)
-    torch.set_float32_matmul_precision('high')  # TF32 for matmul
-    # NEW PyTorch 2.9 API (no warnings!)
     torch.set_float32_matmul_precision('high')
     torch.backends.cudnn.conv.fp32_precision = 'tf32'
     torch.backends.cuda.matmul.fp32_precision = 'high'
-    print(" TF32 enabled (20-30% speedup)")
+    print("TF32 enabled")
     
-    # 2. Enable Flash Attention
     torch.backends.cuda.enable_flash_sdp(True)
     torch.backends.cuda.enable_mem_efficient_sdp(True)
-    print(" Flash Attention enabled")
+    print("Flash Attention enabled")
     
-    # 3. Inductor configuration for Blackwell
     torch._inductor.config.triton.cudagraphs = True
     torch._inductor.config.triton.cudagraph_trees = True
-    print(" CUDA graph trees enabled (15-20% speedup)")
-    
     torch._inductor.config.max_autotune = True
     torch._inductor.config.coordinate_descent_tuning = True
     torch._inductor.config.epilogue_fusion = True
-    print(" Inductor max-autotune enabled")
+    print("Inductor configuration applied")
     
-    # 4. Triton settings for Blackwell (SM 10.0)
     os.environ['TRITON_CUDNN_ALGOS'] = '1'
     os.environ['TRITON_ALWAYS_COMPILE'] = '1'
-    print(" Triton configured for Blackwell")
-    
-    # 5. Set CUDA optimization flags
     os.environ['CUDA_LAUNCH_BLOCKING'] = '0'
     os.environ['TORCH_CUDNN_V8_API_ENABLED'] = '1'
-    print(" CUDA flags optimized")
     
     print("=" * 80 + "\n")
 
 
 class OptimizedTransformerBlock(nn.Module):
-    """
-    Transformer block optimized for torch.compile
-    """
+    """Transformer block optimized for torch.compile."""
     def __init__(self, d_model=1024, num_heads=16, d_ff=4096):
         super().__init__()
         self.d_model = d_model
@@ -118,15 +88,9 @@ class OptimizedTransformerBlock(nn.Module):
 
 
 def benchmark_with_proper_warmup(model, x, name):
-    """
-    Benchmark using Triton's testing framework.
-    
-    Triton handles warmup, synchronization, and outlier removal automatically.
-    This is the recommended way to benchmark GPU code.
-    """
+    """Benchmark using Triton's testing framework with automatic warmup."""
     print(f"\nBenchmarking: {name}")
     
-    # Use Triton benchmarking - handles warmup (100+ iterations) automatically
     def run_model():
         with torch.no_grad():
             return model(x)
@@ -141,10 +105,7 @@ def benchmark_with_proper_warmup(model, x, name):
 
 
 def main():
-    """
-    Demonstrate PROPER torch.compile usage for Blackwell
-    """
-    # 1. Configure for peak performance
+    """Demonstrate torch.compile usage for Blackwell."""
     configure_for_blackwell_peak_performance()
     
     # 2. Create model (larger for better compilation benefits)

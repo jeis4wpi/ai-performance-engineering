@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
 """
-Inspecting torch.compile Generated Code - Chapter 14 Example
+Inspecting torch.compile Generated Code
 
-This example shows how to:
-1. Dump compiled kernels to inspect what PyTorch generates
-2. Review Triton kernels generated for transformer blocks
-3. Understand what optimizations torch.compile applies
-
-Perfect for debugging and understanding LLM performance!
-
-Hardware: NVIDIA B200 (SM 10.0)
-Software: PyTorch 2.9, CUDA 13
+Shows how to dump and inspect compiled kernels to understand
+what optimizations torch.compile applies to transformer blocks.
 """
 
 import torch
@@ -26,10 +19,7 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 
 class SimpleLLMBlock(nn.Module):
-    """
-    Simplified LLM block - common pattern in GPT, LLaMA, etc.
-    Perfect for demonstrating torch.compile optimizations.
-    """
+    """Simplified LLM block for demonstrating torch.compile optimizations."""
     def __init__(self, d_model=2048, n_heads=16, d_ff=8192):
         super().__init__()
         self.ln1 = nn.LayerNorm(d_model)
@@ -60,14 +50,12 @@ def setup_code_dump_directory():
         shutil.rmtree(output_dir)
     
     output_dir.mkdir(exist_ok=True)
-    print(f"✓ Output directory: {output_dir.absolute()}")
+    print(f"Output directory: {output_dir.absolute()}")
     return output_dir
 
 
 def inspect_compiled_code():
-    """
-    Main function: Compile an LLM block and inspect generated code
-    """
+    """Compile an LLM block and inspect generated code."""
     print("=" * 80)
     print("INSPECTING torch.compile GENERATED CODE")
     print("=" * 80)

@@ -76,9 +76,9 @@ int main() {
   bool isBlackwell = (prop.major == 10 && prop.minor == 0);
   std::printf("GPU: %s (Compute Capability %d.%d)\n", prop.name, prop.major, prop.minor);
   if (isBlackwell) {
-    std::printf("✓ Blackwell GPU detected - 256-bit loads available\n\n");
+    std::printf("Blackwell GPU detected - 256-bit loads available\n\n");
   } else {
-    std::printf("! Pre-Blackwell GPU - 256-bit loads will be split\n\n");
+    std::printf("Pre-Blackwell GPU - 256-bit loads will be split\n\n");
   }
   
   // Allocate and initialize host memory

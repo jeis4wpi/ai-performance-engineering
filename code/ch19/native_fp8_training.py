@@ -1,23 +1,9 @@
 #!/usr/bin/env python3
 """
 Native FP8 Training with PyTorch 2.9
-====================================
 
-Demonstrates native FP8 training without Transformer Engine dependency.
-PyTorch 2.9 includes torch.float8_e4m3fn and torch.float8_e5m2 types that
-work directly with Blackwell's 5th-gen Tensor Cores.
-
-Performance on Blackwell B200:
-- 1.4-1.6x speedup over FP16
-- ~1200 TFLOPS for large models
-- 2x memory savings
-
-Requirements:
-- PyTorch 2.9+
-- CUDA 13.0+
-- Blackwell GPU (B200/B300)
-
-Expected Runtime: ~30 seconds
+Demonstrates native FP8 training using torch.float8_e4m3fn and torch.float8_e5m2
+types that work with Blackwell's Tensor Cores. Requires PyTorch 2.9+ and CUDA 13.0+.
 """
 
 from __future__ import annotations

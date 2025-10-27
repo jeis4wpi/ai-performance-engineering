@@ -1,22 +1,9 @@
 #!/usr/bin/env python3
 """
 Compiled Autograd with PyTorch 2.9
-===================================
 
-PyTorch 2.9 can compile the backward pass for 20-30% speedup in training.
-This is critical for training efficiency on Blackwell GPUs.
-
-Key Benefits:
-- 20-30% faster backward pass
-- Better kernel fusion
-- Reduced overhead
-- Memory efficiency improvements
-
-Requirements:
-- PyTorch 2.9+
-- CUDA 13.0+
-
-Expected Runtime: ~20 seconds
+PyTorch 2.9 can compile the backward pass for improved training efficiency.
+Requires PyTorch 2.9+ and CUDA 13.0+.
 """
 
 from __future__ import annotations
