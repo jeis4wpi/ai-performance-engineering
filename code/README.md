@@ -5,7 +5,7 @@ Production playbook for standing up, validating, and tuning PyTorch LLM workload
 ---
 
 ## Overview
-**Target hardware:** NVIDIA Blackwell B200/B300 (sm100), Grace Blackwell GB200/GB300 (sm102), and DGX Spark GB10 (sm121)  
+**Target hardware:** NVIDIA Blackwell B200/B300 (sm100/103), Grace Blackwell GB200/GB300 (sm100/sm103), and DGX Spark GB10 (sm121)
 **Reference stack:** CUDA 13+, PyTorch 2.9+, Triton 3.5+, and Python 3.10+
 
 The repository packages everything needed to:
