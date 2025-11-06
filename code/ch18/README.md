@@ -18,8 +18,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 7: Memory Access Patterns](../ch7/README.md) - coalescing fundamentals
-- [Chapter 10: Tensor Cores](../ch10/README.md) - matrix operations
+- [Chapter 7: Memory Access Patterns](.[executable]/[file]) - coalescing fundamentals
+- [Chapter 10: Tensor Cores](.[executable]/[file]) - matrix operations
 
 **Required**: Understanding of attention mechanism and memory hierarchy
 
@@ -32,10 +32,10 @@ After completing this chapter, you can:
 ```python
 def naive_attention(Q, K, V):
     # Q, K, V: [batch, heads, seq_len, head_dim]
-    scores = torch.matmul(Q, K.transpose(-2, -1))  # [batch, heads, seq_len, seq_len]
-    scores = scores / math.sqrt(Q.size(-1))
-    attention = torch.softmax(scores, dim=-1)      # Problem: Materializes huge matrix!
-    output = torch.matmul(attention, V)
+    scores = [file](Q, [file](-2, -1))  # [batch, heads, seq_len, seq_len]
+    scores = scores / [file]([file](-1))
+    attention = [file](scores, dim=-1)      # Problem: Materializes huge matrix!
+    output = [file](attention, V)
     return output
 ```
 
@@ -47,7 +47,7 @@ def naive_attention(Q, K, V):
 
 ## Examples
 
-### 1. `flex_attention_enhanced.py` - FlashAttention-style Optimized Attention
+###  FlashAttention-style Optimized Attention
 
 **Purpose**: Memory-efficient attention using tiling and recomputation.
 
@@ -70,7 +70,7 @@ def flashattention(q, k, v, causal=False):
     """
     output = flash_attn_func(
         q, k, v,
-        dropout_p=0.0,
+        dropout_p=[file],
         softmax_scale=None,  # Auto: 1/sqrt(head_dim)
         causal=causal,
     )
@@ -79,25 +79,25 @@ def flashattention(q, k, v, causal=False):
 # Benchmark
 batch_size, seq_len, num_heads, head_dim = 32, 4096, 32, 128
 
-q = torch.randn(batch_size, seq_len, num_heads, head_dim, dtype=torch.float16, device='cuda')
-k = torch.randn(batch_size, seq_len, num_heads, head_dim, dtype=torch.float16, device='cuda')
-v = torch.randn(batch_size, seq_len, num_heads, head_dim, dtype=torch.float16, device='cuda')
+q = [file](batch_size, seq_len, num_heads, head_dim, dtype=[file], device='cuda')
+k = [file](batch_size, seq_len, num_heads, head_dim, dtype=[file], device='cuda')
+v = [file](batch_size, seq_len, num_heads, head_dim, dtype=[file], device='cuda')
 
 # Naive attention
-torch.cuda.reset_peak_memory_stats()
-start = time.time()
+[file].reset_peak_memory_stats()
+start = [file]()
 output_naive = naive_attention(q, k, v)
-torch.cuda.synchronize()
-time_naive = time.time() - start
-memory_naive = torch.cuda.max_memory_allocated() / 1e9
+[file].synchronize()
+time_naive = [file]() - start
+memory_naive = [file].max_memory_allocated() / 1e9
 
 # FlashAttention
-torch.cuda.reset_peak_memory_stats()
-start = time.time()
+[file].reset_peak_memory_stats()
+start = [file]()
 output_flash = flashattention(q, k, v)
-torch.cuda.synchronize()
-time_flash = time.time() - start
-memory_flash = torch.cuda.max_memory_allocated() / 1e9
+[file].synchronize()
+time_flash = [file]() - start
+memory_flash = [file].max_memory_allocated() / 1e9
 
 print(f"Naive Attention:")
 print(f"  Time: {time_naive * 1000:.2f} ms")
@@ -112,30 +112,30 @@ print(f"  Memory: {memory_flash:.2f} GB ({memory_naive / memory_flash:.2f}x less
 ```
 Naive Attention:
   Time: 145 ms
-  Memory: 4.2 GB
+  Memory: [file] GB
 
 FlashAttention:
-  Time: 38 ms (3.8x faster) [OK]
-  Memory: 0.6 GB (7x less) [OK]
+  Time: 38 ms ([file] faster) [OK]
+  Memory: [file] GB (7x less) [OK]
 ```
 
 **How to run**:
 ```bash
 pip install flash-attn --no-build-isolation
-python3 flex_attention_enhanced.py
+python3 [script]
 ```
 
 ---
 
-### 2. `flex_attention_native.py` - FlexAttention for Custom Patterns
+###  FlexAttention for Custom Patterns
 
 **Purpose**: Flexible attention patterns (document masking, sliding window, etc.).
 
-**FlexAttention** (PyTorch 2.5+): Define custom masking functions in Python!
+**FlexAttention** (PyTorch [file]+): Define custom masking functions in Python!
 
 ```python
 import torch
-from torch.nn.attention.flex_attention import flex_attention, create_block_mask
+from [file].[file]_attention import flex_attention, create_block_mask
 
 def document_masking(b, h, q_idx, kv_idx):
     """
@@ -168,18 +168,18 @@ output = flex_attention(q, k, v, block_mask=block_mask)
 
 **Use cases**:
 - **Document masking**: Multi-document batches
-- **Sliding window**: Local attention (e.g., Longformer)
+- **Sliding window**: Local attention ([file]., Longformer)
 - **Block-diagonal**: Separate sequences in batch
 - **Custom patterns**: Any pattern you can express in Python!
 
 **How to run**:
 ```bash
-python3 flex_attention_native.py
+python3 [script]
 ```
 
 ---
 
-### 3. `mla_kernel.cu` - Multi-head Latent Attention
+### 3. `[CUDA file]` (see source files for implementation) - Multi-head Latent Attention
 
 **Purpose**: Reduce KV cache size with latent compression.
 
@@ -197,7 +197,7 @@ python3 flex_attention_native.py
 - For seq_len=4096: **8 MB per sequence** → **8x reduction!**
 
 ```cuda
-// mla_kernel.cu - MLA attention kernel
+// [file] - MLA attention kernel
 
 __global__ void mla_attention_kernel(
     const half* Q,           // [batch, heads, seq_len, head_dim]
@@ -213,9 +213,9 @@ __global__ void mla_attention_kernel(
     int latent_dim
 ) {
     // Thread/block indexing
-    int batch_idx = blockIdx.z;
-    int head_idx = blockIdx.y;
-    int q_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int batch_idx = [file];
+    int head_idx = [file];
+    int q_idx = [file] * [file] + [file];
     
     if (q_idx >= seq_len) return;
     
@@ -230,7 +230,7 @@ __global__ void mla_attention_kernel(
     
     // Attention scores
     float max_score = -INFINITY;
-    float sum_exp = 0.0f;
+    float sum_exp = [file];
     float scores[MAX_SEQ_LEN];
     
     // For each KV position
@@ -248,7 +248,7 @@ __global__ void mla_attention_kernel(
         }
         
         // Compute score: Q · K
-        float score = 0.0f;
+        float score = [file];
         for (int d = 0; d < head_dim; d++) {
             score += __half2float(__hmul(q[d], k[d]));
         }
@@ -306,13 +306,13 @@ __global__ void mla_attention_kernel(
 
 **How to run**:
 ```bash
-make mla_kernel
-./mla_kernel
+make
+[executable]
 ```
 
 ---
 
-### 4. `sliding_window_attention.cu` - Sliding Window Attention
+### 4. `[CUDA file]` (see source files for implementation) - Sliding Window Attention
 
 **Purpose**: Local attention for long sequences (Longformer-style).
 
@@ -322,7 +322,7 @@ __global__ void sliding_window_attention_kernel(
     half* output,
     int seq_len, int head_dim, int window_size
 ) {
-    int q_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int q_idx = [file] * [file] + [file];
     if (q_idx >= seq_len) return;
     
     // Attention only within window
@@ -338,13 +338,13 @@ __global__ void sliding_window_attention_kernel(
 
 **How to run**:
 ```bash
-make sliding_window_attention
-./sliding_window_attention
+make
+[executable]
 ```
 
 ---
 
-### 5. `paged_attention_simple.cu` - PagedAttention (vLLM)
+### 5. `[CUDA file]` (see source files for implementation) - PagedAttention (vLLM)
 
 **Purpose**: Efficient KV cache management with paging.
 
@@ -367,8 +367,8 @@ __global__ void paged_attention_kernel(
     int head_dim,
     int block_size
 ) {
-    int seq_idx = blockIdx.x;
-    int head_idx = blockIdx.y;
+    int seq_idx = [file];
+    int head_idx = [file];
     
     PageTable page_table = page_tables[seq_idx];
     
@@ -380,12 +380,12 @@ __global__ void paged_attention_kernel(
     
     // Iterate through logical blocks (pages)
     float max_score = -INFINITY;
-    float sum_exp = 0.0f;
+    float sum_exp = [file];
     float scores[MAX_BLOCKS * BLOCK_SIZE];
     
-    int total_tokens = page_table.num_blocks * block_size;
-    for (int logical_block = 0; logical_block < page_table.num_blocks; logical_block++) {
-        int physical_block = page_table.physical_blocks[logical_block];
+    int total_tokens = [file]_blocks * block_size;
+    for (int logical_block = 0; logical_block < [file]_blocks; logical_block++) {
+        int physical_block = [file]_blocks[logical_block];
         
         // Iterate through tokens in this block
         for (int token_in_block = 0; token_in_block < block_size; token_in_block++) {
@@ -400,7 +400,7 @@ __global__ void paged_attention_kernel(
             }
             
             // Compute score
-            float score = 0.0f;
+            float score = [file];
             for (int d = 0; d < head_dim; d++) {
                 score += __half2float(__hmul(q[d], k[d]));
             }
@@ -428,7 +428,7 @@ __global__ void paged_attention_kernel(
 | **Naive** | O(N²) | Baseline | Short sequences (<1K) |
 | **FlashAttention** | O(N) | 2-4x | General purpose (1K-16K) |
 | **FlexAttention** | O(N) | 2-4x | Custom patterns (documents, sliding) |
-| **MLA** | O(N × L) | 0.8x | Large batches (KV cache limited) |
+| **MLA** | O(N × L) | [file] | Large batches (KV cache limited) |
 | **Sliding Window** | O(N × W) | 3-5x | Very long sequences (>16K) |
 | **PagedAttention** | O(N) | 2-3x | Production serving (memory mgmt) |
 
@@ -440,20 +440,20 @@ __global__ void paged_attention_kernel(
 cd ch18
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 pip install flash-attn --no-build-isolation
 
 # FlashAttention-style optimized attention
-python3 flex_attention_enhanced.py
+python3 [script]
 
 # FlexAttention with custom patterns
-python3 flex_attention_native.py
+python3 [script]
 
 # Custom CUDA kernels
 make
-./mla_kernel
-./sliding_window_attention
-./paged_attention_simple
+[executable]
+[executable]
+[executable]
 ```
 
 ---
@@ -502,23 +502,23 @@ make
 
 ## Next Steps
 
-**Batched operations** → [Chapter 19: Batched GEMM](../ch19/README.md)
+**Batched operations** → [Chapter 19: Batched GEMM](.[executable]/[file])
 
 Learn about:
 - Batched matrix multiplications
 - Grouped GEMM for MoE
 - cuBLASLt for optimized batching
 
-**Back to profiling** → [Chapter 17: Dynamic Routing](../ch17/README.md)
+**Back to profiling** → [Chapter 17: Dynamic Routing](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **FlashAttention**: [Paper](https://arxiv.org/abs/2205.14135), [FlashAttention-2](https://arxiv.org/abs/2307.08691)
-- **FlexAttention**: [PyTorch Blog](https://pytorch.org/blog/flexattention/)
-- **MLA**: [DeepSeek-V3 Paper](https://arxiv.org/abs/2412.19437)
-- **PagedAttention**: [vLLM Paper](https://arxiv.org/abs/2309.06180)
+- **FlashAttention**: [Paper](https://[file]/abs/[file]), [FlashAttention-2](https://[file]/abs/[file])
+- **FlexAttention**: [PyTorch Blog](https://[file]/blog/flexattention/)
+- **MLA**: [DeepSeek-V3 Paper](https://[file]/abs/[file])
+- **PagedAttention**: [vLLM Paper](https://[file]/abs/[file])
 
 ---
 

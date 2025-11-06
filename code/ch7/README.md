@@ -18,8 +18,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 2: NVIDIA GPU Hardware](../ch2/README.md) - memory hierarchy
-- [Chapter 6: CUDA Basics](../ch6/README.md) - thread indexing
+- [Chapter 2: NVIDIA GPU Hardware](.[executable]/README.md) - memory hierarchy
+- [Chapter 6: CUDA Basics](.[executable]/README.md) - thread indexing
 
 **Required**: Understanding of memory hierarchy and cache behavior
 
@@ -40,9 +40,9 @@ HBM3e (Global):   ~400 cycles  ← Most data lives here
 
 ## Examples: Memory Access Patterns
 
-### 1. `scalar_copy.cu` → `vectorized_copy.cu` - Vectorization
+### 1. `[CUDA file]` (see source files for implementation) → `[CUDA file]` (see source files for implementation) - Vectorization
 
-#### Baseline: `scalar_copy.cu`
+#### Baseline: `[CUDA file]` (see source files for implementation)
 
 **Problem**: Scalar loads/stores underutilize memory bus width.
 
@@ -57,7 +57,7 @@ __global__ void copyScalar(const float* in, float* out, int n) {
 
 **Bandwidth**: ~1.2 TB/s on NVIDIA GPU (15% of peak!)
 
-#### Optimized: `vectorized_copy.cu`
+#### Optimized: `[CUDA file]` (see source files for implementation)
 
 **Solution**: Load 16 bytes (float4) per transaction.
 
@@ -96,15 +96,13 @@ __global__ void copyVectorized8(const Float8* in, Float8* out, int n) {
 **How to run**:
 ```bash
 make scalar_copy vectorized_copy
-./scalar_copy_sm100
-./vectorized_copy_sm100
 ```
 
 ---
 
-### 2. `uncoalesced_copy.cu` → `coalesced_copy.cu` - Memory Coalescing
+### 2. `[CUDA file]` (see source files for implementation) → `[CUDA file]` (see source files for implementation) - Memory Coalescing
 
-#### Baseline: `uncoalesced_copy.cu`
+#### Baseline: `[CUDA file]` (see source files for implementation)
 
 **Problem**: Strided access pattern prevents coalescing.
 
@@ -121,7 +119,7 @@ __global__ void copyUncoalesced(const float* in, float* out, int n) {
 
 **Why it's slow**: Each thread in warp accesses different cache line → 32 transactions instead of 1!
 
-**Bandwidth**: ~150 GB/s (2% of peak!) ERROR: #### Optimized: `coalesced_copy.cu`
+**Bandwidth**: ~150 GB/s (2% of peak!) ERROR: #### Optimized: `[CUDA file]` (see source files for implementation)
 
 **Solution**: Sequential access pattern within warp.
 
@@ -144,17 +142,15 @@ __global__ void copyCoalesced(const float* in, float* out, int n) {
 **How to run**:
 ```bash
 make uncoalesced_copy coalesced_copy
-./uncoalesced_copy_sm100
-./coalesced_copy_sm100
 ```
 
 **Key rule**: Threads in a warp should access consecutive memory addresses.
 
 ---
 
-### 3. `transpose_naive.cu` → `transpose_padded.cu` - Bank Conflicts
+### 3. `[CUDA file]` (see source files for implementation) → `[CUDA file]` (see source files for implementation) - Bank Conflicts
 
-#### Baseline: `transpose_naive.cu`
+#### Baseline: `[CUDA file]` (see source files for implementation)
 
 **Problem**: Shared memory bank conflicts during transpose.
 
@@ -185,7 +181,7 @@ __global__ void transposeNaive(const float* in, float* out, int width, int heigh
 
 **Bandwidth**: ~2.1 TB/s (limited by bank conflicts)
 
-#### Optimized: `transpose_padded.cu`
+#### Optimized: `[CUDA file]` (see source files for implementation)
 
 **Solution**: Add padding to avoid bank conflicts.
 
@@ -211,15 +207,13 @@ __global__ void transposePadded(const float* in, float* out, int width, int heig
 **How to run**:
 ```bash
 make transpose_naive transpose_padded
-./transpose_naive_sm100
-./transpose_padded_sm100
 ```
 
 ---
 
-### 4. `naive_matmul.cu` → `tiled_matmul.cu` - Shared Memory Tiling
+### 4. `[CUDA file]` (see source files for implementation) → `[CUDA file]` (see source files for implementation) - Shared Memory Tiling
 
-#### Baseline: `naive_matmul.cu`
+#### Baseline: `[CUDA file]` (see source files for implementation)
 
 **Problem**: Each element loaded from global memory multiple times.
 
@@ -243,7 +237,7 @@ __global__ void matmulNaive(const float* A, const float* B, float* C,
 
 **FLOPS**: ~180 GFLOPS (0.009% of peak!)
 
-#### Optimized: `tiled_matmul.cu`
+#### Optimized: `[CUDA file]` (see source files for implementation)
 
 **Solution**: Load tiles into shared memory, reuse.
 
@@ -282,15 +276,15 @@ __global__ void matmulTiled(const float* A, const float* B, float* C,
 **How to run**:
 ```bash
 make naive_matmul tiled_matmul
-./naive_matmul_sm100 1024 1024 1024
-./tiled_matmul_sm100 1024 1024 1024
+[executable] 1024 1024 1024
+[executable] 1024 1024 1024
 ```
 
 **Note**: Chapter 10 covers tensor cores for 100x faster matmul!
 
 ---
 
-### 5. `naive_lookup.cu` → `optimized_lookup.cu` - Memory Access Patterns
+### 5. `[CUDA file]` (see source files for implementation) → [source file] - Memory Access Patterns
 
 **Purpose**: Demonstrate impact of access patterns on cache efficiency.
 
@@ -300,15 +294,13 @@ make naive_matmul tiled_matmul
 **How to run**:
 ```bash
 make naive_lookup optimized_lookup
-./naive_lookup_sm100
-./optimized_lookup_sm100
 ```
 
 ---
 
 ## PyTorch Examples
 
-### 6. `memory_access_pytorch.py` - Memory Layout
+###  Memory Layout
 
 **Purpose**: Show how PyTorch memory layout affects performance.
 
@@ -329,10 +321,10 @@ C = torch.matmul(A_t_cont, B)  # Fast again!
 
 **How to run**:
 ```bash
-python3 memory_access_pytorch.py
+python3 [script]
 ```
 
-### 7. `vectorized_pytorch.py` - Vectorized Operations
+###  Vectorized Operations
 
 **Purpose**: Compare element-wise vs vectorized ops.
 
@@ -354,7 +346,7 @@ C = A + B  # 1000x faster!
 Use common profiling tools:
 
 ```bash
-../../common/profiling/profile_cuda.sh ./vectorized_copy baseline
+../.[executable]/profiling/profile_cuda.sh [executable] baseline
 ```
 
 **In Nsight Compute**, look for:
@@ -400,24 +392,18 @@ cd ch7
 make
 
 # Run memory access pattern comparisons
-./scalar_copy_sm100           # Baseline
-./vectorized_copy_sm100       # 4x faster
 
-./uncoalesced_copy_sm100      # Bad pattern
-./coalesced_copy_sm100        # 25x faster!
 
-./transpose_naive_sm100       # Bank conflicts
-./transpose_padded_sm100      # 2x faster
 
-./naive_matmul_sm100 1024 1024 1024    # No tiling
-./tiled_matmul_sm100 1024 1024 1024    # 12x faster
+[executable] 1024 1024 1024    # No tiling
+[executable] 1024 1024 1024    # 12x faster
 
 # Profile to see bandwidth
-../../common/profiling/profile_cuda.sh ./vectorized_copy baseline
+../.[executable]/profiling/profile_cuda.sh [executable] baseline
 
 # PyTorch examples
-python3 memory_access_pytorch.py
-python3 vectorized_pytorch.py
+python3 [script]
+python3 [script]
 ```
 
 ---
@@ -501,7 +487,7 @@ if not tensor.is_contiguous():
 
 ## Next Steps
 
-**Master occupancy and ILP** → [Chapter 8: Occupancy and ILP](../ch8/README.md)
+**Master occupancy and ILP** → [Chapter 8: Occupancy and ILP](.[executable]/README.md)
 
 Learn about:
 - Occupancy tuning for latency hiding
@@ -509,7 +495,7 @@ Learn about:
 - Register pressure management
 - Warp divergence mitigation
 
-**Jump to kernel efficiency** → [Chapter 9: Kernel Efficiency & Arithmetic Intensity](../ch9/README.md)
+**Jump to kernel efficiency** → [Chapter 9: Kernel Efficiency & Arithmetic Intensity](.[executable]/README.md)
 
 ---
 

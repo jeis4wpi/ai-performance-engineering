@@ -9,7 +9,7 @@ SUFFIX = $(TARGET_SUFFIX)
 BASE_TARGETS = baseline_add optimized_add_parallel baseline_coalescing_uncoalesced optimized_coalescing baseline_bank_conflicts optimized_bank_conflicts baseline_ilp optimized_ilp baseline_launch_bounds optimized_launch_bounds
 TARGETS = $(addsuffix $(SUFFIX), $(BASE_TARGETS))
 
-.PHONY: all clean test compare blackwell grace-blackwell profile-nsys profile-ncu profile-hta profile-perf profile-all $(TARGETS)
+.PHONY: all clean test compare b200 gb10 b300 gb300 profile-nsys profile-ncu profile-hta profile-perf profile-all $(TARGETS)
 
 all: $(TARGETS)
 	@echo "Building all Chapter 6 examples with $(ARCH) (CUDA $(CUDA_VERSION))"
@@ -64,11 +64,17 @@ compare: clean
 		$(MAKE) ARCH=$${arch} all; \
 	done
 
-blackwell: ARCH=sm_100
-blackwell: clean all
+b200: ARCH=sm_100
+b200: clean all
 
-grace-blackwell: ARCH=sm_121
-grace-blackwell: clean all
+gb10: ARCH=sm_121
+gb10: clean all
+
+b300: ARCH=sm_103
+b300: clean all
+
+gb300: ARCH=sm_103
+gb300: clean all
 
 profile-nsys: all
 	@echo "Nsight Systems timeline profiling..."

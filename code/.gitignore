@@ -132,8 +132,16 @@ ch*/*.png
 ch*/*.svg
 
 # Chapter NVCC build products (extensionless executables)
-ch*/[A-Za-z0-9_-]*
+# Match extensionless executables but exclude source files and config files
+ch*/*_sm[0-9]*
+ch*/*_sm[0-9][0-9]*
+# Explicitly allow Python and CUDA source files
+!ch*/*.py
+!ch*/*.cu
 !ch*/Makefile
+!ch*/README.md
+!ch*/arch_config.py
+!ch*/compare.py
 
 # NFS files
 .nfs*

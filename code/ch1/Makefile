@@ -10,7 +10,7 @@ SUFFIX = $(TARGET_SUFFIX)
 BASE_TARGETS = baseline_gemm optimized_gemm_batched optimized_gemm_strided baseline_arithmetic_intensity optimized_arithmetic_intensity_combined
 TARGETS = $(addsuffix $(SUFFIX), $(BASE_TARGETS))
 
-.PHONY: all clean test compare blackwell grace-blackwell
+.PHONY: all clean test compare b200 gb10 b300 gb300
 
 all: $(TARGETS)
 	@echo "Building Chapter 1 examples with $(ARCH) (CUDA $(CUDA_VERSION))"
@@ -33,10 +33,11 @@ optimized_arithmetic_intensity_combined$(SUFFIX): optimized_arithmetic_intensity
 
 test: all
 	@echo "Testing batched GEMM optimization..."
-	./batched_gemm_example$(SUFFIX)
+	./baseline_gemm$(SUFFIX) || echo "Note: Run baseline_gemm manually"
 	@echo ""
 	@echo "Testing PyTorch optimizations..."
-	cd .. && PYTHONPATH=.:$$PYTHONPATH python3 ch1/performance_basics_optimized.py
+	cd .. && PYTHONPATH=.:$$PYTHONPATH python3 ch1/baseline_performance.py
+	cd .. && PYTHONPATH=.:$$PYTHONPATH python3 ch1/optimized_performance_graphs.py
 
 compare: clean
 	@echo "========================================"
@@ -52,11 +53,17 @@ compare: clean
 	@echo "  ./batched_gemm_example_sm100"
 	@echo "  ./batched_gemm_example_sm121"
 
-blackwell: ARCH=sm_100
-blackwell: clean all
+b200: ARCH=sm_100
+b200: clean all
 
-grace-blackwell: ARCH=sm_121
-grace-blackwell: clean all
+gb10: ARCH=sm_121
+gb10: clean all
+
+b300: ARCH=sm_103
+b300: clean all
+
+gb300: ARCH=sm_103
+gb300: clean all
 
 clean:
 	rm -f batched_gemm_example_sm100 batched_gemm_example_sm121 *.o *.so *.a

@@ -18,6 +18,8 @@ import argparse
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 from collections import defaultdict
+import statistics
+from dataclasses import dataclass
 
 # Ensure repository root on sys.path before importing helpers
 repo_root = Path(__file__).resolve().parent.parent.parent
@@ -36,6 +38,27 @@ import tempfile
 from typing import List, Tuple, Any
 from common.python.chapter_compare_template import discover_benchmarks, load_benchmark
 from common.python.benchmark_harness import BenchmarkHarness, BenchmarkMode, BenchmarkConfig
+
+
+def format_time_ms(time_ms: float) -> str:
+    """Format time in milliseconds with adaptive precision.
+    
+    For very small values (< 1ms), use more decimal places to show actual timing.
+    For larger values, use 2 decimal places.
+    Handles zero and negative values appropriately.
+    """
+    if time_ms <= 0.0:
+        return f"{time_ms:.2f}"
+    elif time_ms < 0.001:
+        return f"{time_ms:.6f}"  # microseconds precision
+    elif time_ms < 0.01:
+        return f"{time_ms:.5f}"
+    elif time_ms < 0.1:
+        return f"{time_ms:.4f}"
+    elif time_ms < 1.0:
+        return f"{time_ms:.3f}"
+    else:
+        return f"{time_ms:.2f}"
 
 
 def reset_cuda_state():
@@ -66,10 +89,9 @@ def check_hardware_limitation(error_msg: str) -> Optional[str]:
     """
     error_lower = error_msg.lower()
     
-    # Triton SM architecture issues (GB10 SM 12.1 not fully supported)
-    # This is the ONLY true hardware limitation that should be skipped
-    if 'sm_121a' in error_msg or ('ptxas' in error_lower and 'sm_121' in error_msg):
-        return "Triton compiler limitation: SM 12.1 architecture not fully supported by current Triton version"
+    # Triton SM architecture issues - REMOVED!
+    # arch_config.py patches Triton to work with SM 12.1, so Triton benchmarks should work.
+    # If they fail, it's a real error, not a hardware limitation - don't skip.
     
     # Device-side assert cascades - these should be prevented by reset_cuda_state()
     # But if they still occur, it's a transient state issue, not a hardware limitation
@@ -200,17 +222,30 @@ def find_cuda_executable(cu_file: Path, chapter_dir: Path) -> Optional[Path]:
     return None
 
 
-def benchmark_cuda_executable(executable: Path, iterations: int = 20, warmup: int = 5, timeout: int = 120) -> Optional[float]:
-    """Benchmark a CUDA executable and return mean execution time in milliseconds.
+@dataclass
+class CudaBenchmarkResult:
+    """Statistical results from CUDA executable benchmarking."""
+    mean_ms: float
+    median_ms: float
+    std_ms: float
+    min_ms: float
+    max_ms: float
+    percentiles: Dict[float, float]  # e.g., {25.0: 1.23, 50.0: 1.45, ...}
+    iterations: int
+    warmup_iterations: int
+
+
+def benchmark_cuda_executable(executable: Path, iterations: int = 20, warmup: int = 5, timeout: int = 15) -> Optional[CudaBenchmarkResult]:
+    """Benchmark a CUDA executable and return statistical results.
     
     Args:
         executable: Path to CUDA executable
         iterations: Number of benchmark iterations
         warmup: Number of warmup runs
-        timeout: Timeout per run in seconds
+        timeout: Timeout per run in seconds (default: 15 seconds to prevent hangs)
         
     Returns:
-        Mean execution time in milliseconds, or None if failed
+        CudaBenchmarkResult with statistical measures, or None if failed
     """
     times_ms = []
     
@@ -224,6 +259,14 @@ def benchmark_cuda_executable(executable: Path, iterations: int = 20, warmup: in
                 check=False
             )
         except subprocess.TimeoutExpired:
+            # Timeout occurred - kill any remaining processes
+            import os
+            import signal
+            try:
+                # Try to kill any child processes that might still be running
+                os.killpg(os.getpgid(0), signal.SIGTERM)
+            except:
+                pass
             return None
     
     # Benchmark runs
@@ -242,12 +285,42 @@ def benchmark_cuda_executable(executable: Path, iterations: int = 20, warmup: in
                 elapsed_ms = (end - start) * 1000.0
                 times_ms.append(elapsed_ms)
         except subprocess.TimeoutExpired:
+            # Timeout occurred - kill any remaining processes
+            import os
+            import signal
+            try:
+                # Try to kill any child processes that might still be running
+                os.killpg(os.getpgid(0), signal.SIGTERM)
+            except:
+                pass
             return None
     
     if not times_ms:
         return None
     
-    return sum(times_ms) / len(times_ms)
+    # Compute statistics similar to BenchmarkHarness._compute_stats
+    sorted_times = sorted(times_ms)
+    n = len(sorted_times)
+    
+    # Compute percentiles (same as BenchmarkHarness)
+    # Use float keys to match how they're accessed (99.0, 75.0, etc.)
+    percentiles_to_compute = [25.0, 50.0, 75.0, 99.0]
+    percentiles_dict = {}
+    for p in percentiles_to_compute:
+        idx = int((p / 100.0) * (n - 1))
+        idx = min(idx, n - 1)
+        percentiles_dict[p] = sorted_times[idx]
+    
+    return CudaBenchmarkResult(
+        mean_ms=statistics.mean(times_ms),
+        median_ms=statistics.median(times_ms),
+        std_ms=statistics.stdev(times_ms) if n > 1 else 0.0,
+        min_ms=min(times_ms),
+        max_ms=max(times_ms),
+        percentiles=percentiles_dict,
+        iterations=n,
+        warmup_iterations=warmup,
+    )
 
 
 def check_nsys_available() -> bool:
@@ -348,7 +421,7 @@ benchmark.teardown()
             nsys_command,
             cwd=str(chapter_dir),
             capture_output=True,
-            timeout=300,
+            timeout=15,
             check=False
         )
         
@@ -416,7 +489,7 @@ def profile_cuda_executable(
             nsys_command,
             cwd=str(chapter_dir),
             capture_output=True,
-            timeout=300,
+            timeout=15,
             check=False
         )
         
@@ -445,10 +518,14 @@ def ensure_cuda_executables_built(chapter_dir: Path) -> bool:
         result = subprocess.run(
             ["make", "-C", str(chapter_dir)],
             capture_output=True,
-            timeout=300,
+            timeout=60,  # 60s - compilation can take time for complex kernels
             check=False
         )
         return result.returncode == 0
+    except subprocess.TimeoutExpired:
+        # Make timed out - compilation takes too long
+        print(f"  WARNING: Make build timed out after 60s - compilation may be too slow or hanging")
+        return False
     except Exception:
         return False
 
@@ -499,9 +576,12 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
     reset_cuda_state()
     
     # Discover Python benchmarks
+    print(f"  Discovering Python benchmarks...", flush=True)
     python_pairs = discover_benchmarks(chapter_dir)
+    print(f"  Found {len(python_pairs)} Python benchmark pair(s)", flush=True)
     
     # Discover CUDA benchmarks and ensure executables are built
+    print(f"  Discovering CUDA benchmarks...", flush=True)
     cuda_pairs = discover_cuda_benchmarks(chapter_dir)
     if cuda_pairs:
         print(f"  Found {len(cuda_pairs)} CUDA benchmark pair(s), ensuring executables are built...")
@@ -520,10 +600,12 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
             }
         }
     
-    # Create harness for Python benchmarks
+    # Create harness for Python benchmarks with explicit timeout to prevent hangs
     config = BenchmarkConfig(
         iterations=20,
-        warmup=5
+        warmup=5,
+        timeout_seconds=15,  # 15 second timeout per benchmark to prevent hangs
+        enable_memory_tracking=True  # Enable memory metrics display
     )
     harness = BenchmarkHarness(mode=BenchmarkMode.CUSTOM, config=config)
     
@@ -563,7 +645,22 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
             baseline_result = harness.benchmark(baseline_benchmark)
             baseline_time = baseline_result.mean_ms
             result_entry['baseline_time_ms'] = baseline_time
-            print(f"    Baseline: {baseline_time:.2f} ms")
+            
+            # Enhanced baseline metrics display with emojis and formatting
+            print(f"    Baseline: {format_time_ms(baseline_time)} ms")
+            print(f"      📊 Timing Stats: median={format_time_ms(baseline_result.median_ms)}ms, "
+                  f"min={format_time_ms(baseline_result.min_ms)}ms, max={format_time_ms(baseline_result.max_ms)}ms, "
+                  f"std={format_time_ms(baseline_result.std_ms)}ms")
+            if baseline_result.memory_peak_mb:
+                mem_str = f"      💾 Memory: peak={baseline_result.memory_peak_mb:.2f}MB"
+                if baseline_result.memory_allocated_mb:
+                    mem_str += f", allocated={baseline_result.memory_allocated_mb:.2f}MB"
+                print(mem_str)
+            if baseline_result.percentiles:
+                p99 = baseline_result.percentiles.get(99.0, 0)
+                p75 = baseline_result.percentiles.get(75.0, 0)
+                p50 = baseline_result.percentiles.get(50.0, baseline_result.median_ms)
+                print(f"      📈 Percentiles: p99={format_time_ms(p99)}ms, p75={format_time_ms(p75)}ms, p50={format_time_ms(p50)}ms")
             
             # Profile baseline if profiling is enabled
             if enable_profiling and profiling_output_dir:
@@ -601,11 +698,9 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
             if technique == opt_name.replace('optimized_', '').replace('.py', ''):
                 technique = 'default'
             
-            print(f"    Testing: {opt_name}...", end=' ', flush=True)
-            
             optimized_benchmark = load_benchmark(optimized_path)
             if optimized_benchmark is None:
-                print("FAILED (load)")
+                print(f"    Testing: {opt_name}... FAILED (load)")
                 result_entry['optimizations'].append({
                     'file': opt_name,
                     'technique': technique,
@@ -622,7 +717,56 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
                 optimized_time = optimized_result.mean_ms
                 speedup = baseline_time / optimized_time if optimized_time > 0 else 1.0
                 
-                print(f"{optimized_time:.2f} ms ({speedup:.2f}x)")
+                # Enhanced metrics display with emojis and formatting
+                emoji = "🚀" if speedup > 1.0 else "⚠️" if speedup < 1.0 else "="
+                print(f"    Testing: {opt_name}... {format_time_ms(optimized_time)} ms ({speedup:.2f}x) {emoji}")
+                
+                print(f"        📊 Timing: median={format_time_ms(optimized_result.median_ms)}ms, "
+                      f"min={format_time_ms(optimized_result.min_ms)}ms, max={format_time_ms(optimized_result.max_ms)}ms, "
+                      f"std={format_time_ms(optimized_result.std_ms)}ms")
+                
+                if optimized_result.memory_peak_mb:
+                    mem_change = ""
+                    if baseline_result.memory_peak_mb:
+                        diff_mb = optimized_result.memory_peak_mb - baseline_result.memory_peak_mb
+                        pct_change = (diff_mb / baseline_result.memory_peak_mb) * 100 if baseline_result.memory_peak_mb > 0 else 0
+                        sign = "+" if diff_mb >= 0 else ""
+                        mem_change = f" ({sign}{diff_mb:.2f}MB, {sign}{pct_change:.1f}%)"
+                    
+                    mem_str = f"        💾 Memory: peak={optimized_result.memory_peak_mb:.2f}MB{mem_change}"
+                    print(mem_str)
+                    if optimized_result.memory_allocated_mb:
+                        print(f"                 allocated={optimized_result.memory_allocated_mb:.2f}MB")
+                
+                if optimized_result.percentiles:
+                    p99 = optimized_result.percentiles.get(99.0, 0)
+                    p75 = optimized_result.percentiles.get(75.0, 0)
+                    p50 = optimized_result.percentiles.get(50.0, optimized_result.median_ms)
+                    p99_speedup = ""
+                    if baseline_result.percentiles and 99.0 in baseline_result.percentiles:
+                        p99_baseline = baseline_result.percentiles[99.0]
+                        if p99_baseline > 0:
+                            p99_speedup = f" ({p99_baseline/p99:.2f}x)" if p99 > 0 else ""
+                    print(f"        📈 Percentiles: p99={format_time_ms(p99)}ms{p99_speedup}, p75={format_time_ms(p75)}ms, p50={format_time_ms(p50)}ms")
+                
+                # Visual speedup bar (always show for consistency)
+                bar_length = 40
+                if speedup > 1.0:
+                    # Improvement: fill bar proportionally to speedup
+                    filled = min(int((speedup - 1.0) / max(speedup, 10.0) * bar_length), bar_length)
+                    bar = "█" * filled + "░" * (bar_length - filled)
+                    print(f"        [{bar}] {speedup:.2f}x speedup")
+                elif speedup < 1.0:
+                    # Regression: show how much slower (distance from 1.0)
+                    regress_ratio = (1.0 - speedup)  # e.g., 0.93x = 0.07 (7% slower)
+                    # Normalize: 0.5x (50% slower) = full bar, scale linearly
+                    filled = min(int(regress_ratio / 0.5 * bar_length), bar_length)
+                    bar = "█" * filled + "░" * (bar_length - filled)
+                    print(f"        [{bar}] {speedup:.2f}x slowdown")
+                else:
+                    # No change
+                    bar = "░" * bar_length
+                    print(f"        [{bar}] {speedup:.2f}x (no change)")
                 
                 opt_result = {
                     'file': opt_name,
@@ -652,11 +796,59 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
                     speedups.append(speedup)
                 
             except Exception as e:
-                error_str = str(e)
-                skip_reason = check_hardware_limitation(error_str)
+                # Get comprehensive error information with timeout protection
+                def safe_get_error_str(exc, timeout_sec=1):
+                    """Safely get error string with timeout to prevent hangs."""
+                    error_parts = {"type": type(exc).__name__, "str": None, "repr": None}
+                    
+                    def get_str():
+                        try:
+                            error_parts["str"] = str(exc)
+                        except Exception:
+                            pass
+                    
+                    def get_repr():
+                        try:
+                            error_parts["repr"] = repr(exc)
+                        except Exception:
+                            pass
+                    
+                    # Try to get string representation with timeout
+                    import threading
+                    t1 = threading.Thread(target=get_str, daemon=True)
+                    t2 = threading.Thread(target=get_repr, daemon=True)
+                    t1.start()
+                    t2.start()
+                    t1.join(timeout=timeout_sec)
+                    t2.join(timeout=timeout_sec)
+                    
+                    # Use best available representation
+                    if error_parts["str"]:
+                        return error_parts["str"]
+                    elif error_parts["repr"]:
+                        return error_parts["repr"]
+                    else:
+                        return error_parts["type"]
+                
+                error_str = safe_get_error_str(e)
+                error_full = f"{type(e).__name__}: {error_str}" if error_str else type(e).__name__
+                
+                # If error string is suspiciously short or empty, try to get more info
+                if not error_str or len(error_str.strip()) < 3:
+                    import traceback
+                    try:
+                        tb_lines = traceback.format_exception_only(type(e), e)
+                        if tb_lines:
+                            error_full = tb_lines[-1].strip()
+                            error_str = error_full
+                    except Exception:
+                        # If even traceback fails, use minimal info
+                        error_full = f"{type(e).__name__}: (error message unavailable)"
+                
+                skip_reason = check_hardware_limitation(error_full)
                 
                 if skip_reason:
-                    print(f"WARNING: SKIPPED: {skip_reason}")
+                    print(f"    Testing: {opt_name}... WARNING: SKIPPED: {skip_reason}")
                     result_entry['optimizations'].append({
                         'file': opt_name,
                         'technique': technique,
@@ -666,12 +858,23 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
                     })
                     skipped_hw += 1
                 else:
-                    print(f"FAILED ({error_str[:50]})")
+                    # Format error message: show full error but truncate if extremely long
+                    if len(error_full) > 200:
+                        # Try to truncate at word boundary for very long errors
+                        truncated = error_full[:197]
+                        last_space = truncated.rfind(' ')
+                        if last_space > 150:
+                            truncated = truncated[:last_space]
+                        truncated += "..."
+                        print(f"    Testing: {opt_name}... FAILED ({truncated})")
+                        print(f"        Full error: {error_full}")
+                    else:
+                        print(f"    Testing: {opt_name}... FAILED ({error_full})")
                     result_entry['optimizations'].append({
                         'file': opt_name,
                         'technique': technique,
                         'status': 'failed',
-                        'error': error_str,
+                        'error': error_full,  # Store full error with type
                     })
                 
                 reset_cuda_state()  # Reset after failure
@@ -693,7 +896,6 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
     # Process CUDA benchmarks
     for baseline_cu_path, optimized_cu_paths, example_name in cuda_pairs:
         print(f"\n  Example (CUDA): {example_name}")
-        print(f"    Baseline: {baseline_cu_path.name}")
         
         result_entry = {
             'example': example_name,
@@ -714,16 +916,27 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
             failed += 1
             continue
         
-        # Benchmark baseline
-        baseline_time = benchmark_cuda_executable(baseline_executable, iterations=20, warmup=5)
-        if baseline_time is None:
-            result_entry['error'] = 'Baseline execution failed or timed out'
+        # Benchmark baseline with explicit timeout
+        baseline_result = benchmark_cuda_executable(baseline_executable, iterations=20, warmup=5, timeout=15)
+        if baseline_result is None:
+            result_entry['error'] = 'Baseline execution failed or timed out (15s timeout)'
             benchmark_results.append(result_entry)
             failed += 1
             continue
         
+        baseline_time = baseline_result.mean_ms
         result_entry['baseline_time_ms'] = baseline_time
-        print(f"    Baseline: {baseline_time:.2f} ms")
+        
+        # Enhanced baseline metrics display with emojis and formatting (same as Python)
+        print(f"    Baseline: {format_time_ms(baseline_time)} ms")
+        print(f"      📊 Timing Stats: median={format_time_ms(baseline_result.median_ms)}ms, "
+              f"min={format_time_ms(baseline_result.min_ms)}ms, max={format_time_ms(baseline_result.max_ms)}ms, "
+              f"std={format_time_ms(baseline_result.std_ms)}ms")
+        if baseline_result.percentiles:
+            p99 = baseline_result.percentiles.get(99.0, 0)
+            p75 = baseline_result.percentiles.get(75.0, 0)
+            p50 = baseline_result.percentiles.get(50.0, baseline_result.median_ms)
+            print(f"      📈 Percentiles: p99={format_time_ms(p99)}ms, p75={format_time_ms(p75)}ms, p50={format_time_ms(p50)}ms")
         
         # Profile baseline if profiling is enabled
         if enable_profiling and profiling_output_dir:
@@ -744,11 +957,9 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
             if technique == opt_name.replace('optimized_', '').replace('.cu', ''):
                 technique = 'default'
             
-            print(f"    Testing: {opt_name}...", end=' ', flush=True)
-            
             optimized_executable = find_cuda_executable(optimized_cu_path, chapter_dir)
             if optimized_executable is None:
-                print("FAILED (executable not found)")
+                print(f"    Testing: {opt_name}... FAILED (executable not found)")
                 result_entry['optimizations'].append({
                     'file': opt_name,
                     'technique': technique,
@@ -757,19 +968,57 @@ def test_chapter(chapter_dir: Path, enable_profiling: bool = False) -> Dict[str,
                 })
                 continue
             
-            optimized_time = benchmark_cuda_executable(optimized_executable, iterations=20, warmup=5)
-            if optimized_time is None:
-                print("FAILED (execution)")
+            optimized_result = benchmark_cuda_executable(optimized_executable, iterations=20, warmup=5, timeout=15)
+            if optimized_result is None:
+                print(f"    Testing: {opt_name}... FAILED (execution or timeout)")
                 result_entry['optimizations'].append({
                     'file': opt_name,
                     'technique': technique,
                     'status': 'failed',
-                    'error': 'Execution failed or timed out',
+                    'error': 'Execution failed or timed out (15s timeout)',
                 })
                 continue
             
+            optimized_time = optimized_result.mean_ms
             speedup = baseline_time / optimized_time if optimized_time > 0 else 1.0
-            print(f"{optimized_time:.2f} ms ({speedup:.2f}x)")
+            
+            # Enhanced metrics display with emojis and formatting (same as Python)
+            emoji = "🚀" if speedup > 1.0 else "⚠️" if speedup < 1.0 else "="
+            print(f"    Testing: {opt_name}... {format_time_ms(optimized_time)} ms ({speedup:.2f}x) {emoji}")
+            
+            print(f"        📊 Timing: median={format_time_ms(optimized_result.median_ms)}ms, "
+                  f"min={format_time_ms(optimized_result.min_ms)}ms, max={format_time_ms(optimized_result.max_ms)}ms, "
+                  f"std={format_time_ms(optimized_result.std_ms)}ms")
+            
+            if optimized_result.percentiles:
+                p99 = optimized_result.percentiles.get(99.0, 0)
+                p75 = optimized_result.percentiles.get(75.0, 0)
+                p50 = optimized_result.percentiles.get(50.0, optimized_result.median_ms)
+                p99_speedup = ""
+                if baseline_result.percentiles and 99.0 in baseline_result.percentiles:
+                    p99_baseline = baseline_result.percentiles[99.0]
+                    if p99_baseline > 0:
+                        p99_speedup = f" ({p99_baseline/p99:.2f}x)" if p99 > 0 else ""
+                print(f"        📈 Percentiles: p99={format_time_ms(p99)}ms{p99_speedup}, p75={format_time_ms(p75)}ms, p50={format_time_ms(p50)}ms")
+            
+            # Visual speedup bar (always show for consistency, same as Python)
+            bar_length = 40
+            if speedup > 1.0:
+                # Improvement: fill bar proportionally to speedup
+                filled = min(int((speedup - 1.0) / max(speedup, 10.0) * bar_length), bar_length)
+                bar = "█" * filled + "░" * (bar_length - filled)
+                print(f"        [{bar}] {speedup:.2f}x speedup")
+            elif speedup < 1.0:
+                # Regression: show how much slower (distance from 1.0)
+                regress_ratio = (1.0 - speedup)  # e.g., 0.93x = 0.07 (7% slower)
+                # Normalize: 0.5x (50% slower) = full bar, scale linearly
+                filled = min(int(regress_ratio / 0.5 * bar_length), bar_length)
+                bar = "█" * filled + "░" * (bar_length - filled)
+                print(f"        [{bar}] {speedup:.2f}x slowdown")
+            else:
+                # No change
+                bar = "░" * bar_length
+                print(f"        [{bar}] {speedup:.2f}x (no change)")
             
             opt_result = {
                 'file': opt_name,
@@ -991,7 +1240,7 @@ def main():
                 [sys.executable, str(dump_caps_path)],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=15
             )
             print(result.stdout)
             if result.stderr:
@@ -1012,7 +1261,7 @@ def main():
                 [sys.executable, str(precompile_path)],
                 capture_output=True,
                 text=True,
-                timeout=120
+                timeout=60  # 60s - pre-compilation can take time for multiple extensions
             )
             print(result.stdout)
             if result.stderr:

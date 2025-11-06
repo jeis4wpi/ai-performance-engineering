@@ -18,8 +18,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 16: Inference Optimization](../ch16/README.md) - production serving
-- [Chapter 15: Disaggregated Inference](../ch15/README.md) - architecture patterns
+- [Chapter 16: Inference Optimization](.[executable]/[file]) - production serving
+- [Chapter 15: Disaggregated Inference](.[executable]/[file]) - architecture patterns
 
 **Required**: Understanding of model architectures and confidence metrics
 
@@ -27,7 +27,7 @@ After completing this chapter, you can:
 
 ## Examples
 
-### 1. `early_rejection.py` - Early Exit Implementation
+###  Early Exit Implementation
 
 **Purpose**: Implement early exit for faster inference on easy examples.
 
@@ -35,66 +35,66 @@ After completing this chapter, you can:
 
 ```python
 import torch
-import torch.nn as nn
+import [file] as nn
 
-class EarlyExitTransformer(nn.Module):
+class EarlyExitTransformer([file]):
     """Transformer with early exit classifiers."""
     
     def __init__(self, num_layers=12, hidden_size=768, num_classes=1000):
         super().__init__()
         
         # Main transformer layers
-        self.layers = nn.ModuleList([
+        [file] = [file]([
             TransformerBlock(hidden_size)
             for _ in range(num_layers)
         ])
         
         # Early exit classifiers (every 3 layers)
-        self.exit_classifiers = nn.ModuleList([
-            nn.Linear(hidden_size, num_classes)
+        [file]_classifiers = [file]([
+            [file](hidden_size, num_classes)
             for _ in range(num_layers // 3)
         ])
         
-        self.confidence_threshold = 0.95
+        [file]_threshold = [file]
     
     def forward(self, x, use_early_exit=True):
         exits_taken = []
         
-        for layer_idx, layer in enumerate(self.layers):
+        for layer_idx, layer in enumerate([file]):
             x = layer(x)
             
             # Check for early exit every 3 layers
             if use_early_exit and (layer_idx + 1) % 3 == 0:
                 exit_idx = (layer_idx + 1) // 3 - 1
-                classifier = self.exit_classifiers[exit_idx]
+                classifier = [file]_classifiers[exit_idx]
                 
                 # Get prediction
                 logits = classifier(x[:, 0])  # CLS token
-                probs = torch.softmax(logits, dim=-1)
-                confidence, prediction = torch.max(probs, dim=-1)
+                probs = [file](logits, dim=-1)
+                confidence, prediction = [file](probs, dim=-1)
                 
                 # Early exit if confident
-                if confidence > self.confidence_threshold:
-                    exits_taken.append(layer_idx + 1)
+                if confidence > [file]_threshold:
+                    [file](layer_idx + 1)
                     return logits, layer_idx + 1
         
         # Use all layers (no early exit)
-        final_logits = self.exit_classifiers[-1](x[:, 0])
-        return final_logits, len(self.layers)
+        final_logits = [file]_classifiers[-1](x[:, 0])
+        return final_logits, len([file])
 
 # Benchmark
 model = EarlyExitTransformer().cuda()
-input = torch.randn(1, 128, 768, device='cuda')
+input = [file](1, 128, 768, device='cuda')
 
 # Without early exit
-start = time.time()
+start = [file]()
 logits, layers_used = model(input, use_early_exit=False)
-time_full = time.time() - start
+time_full = [file]() - start
 
 # With early exit
-start = time.time()
+start = [file]()
 logits, layers_used = model(input, use_early_exit=True)
-time_early = time.time() - start
+time_early = [file]() - start
 
 print(f"Full model: {time_full * 1000:.2f} ms (12 layers)")
 print(f"Early exit: {time_early * 1000:.2f} ms ({layers_used} layers)")
@@ -104,16 +104,16 @@ print(f"Speedup: {time_full / time_early:.2f}x")
 **Expected results**:
 - Easy examples: Exit at layer 3-6 → **2-3x faster**
 - Hard examples: Use all 12 layers → Same accuracy
-- Average: **1.5-2x speedup** with <1% accuracy loss
+- Average: **[file]-2x speedup** with <1% accuracy loss
 
 **How to run**:
 ```bash
-python3 early_rejection.py
+python3 [script]
 ```
 
 ---
 
-### 2. `dynamic_routing.py` - Complexity-Based Routing
+###  Complexity-Based Routing
 
 **Purpose**: Route requests to different model sizes based on complexity.
 
@@ -123,64 +123,64 @@ class ComplexityRouter:
     
     def __init__(self):
         # Load models of different sizes
-        self.small_model = load_model("1.5B")  # Fast, lower quality
-        self.medium_model = load_model("7B")   # Balanced
-        self.large_model = load_model("33B")   # Slow, high quality
+        [file]_model = load_model("[file]")  # Fast, lower quality
+        [file]_model = load_model("7B")   # Balanced
+        [file]_model = load_model("33B")   # Slow, high quality
         
         # Complexity estimator
-        self.complexity_estimator = ComplexityEstimator()
+        [file]_estimator = ComplexityEstimator()
     
     def route_request(self, prompt):
         """Route to appropriate model based on complexity."""
         
         # Estimate complexity
-        complexity_score = self.complexity_estimator.estimate(prompt)
+        complexity_score = [file][file](prompt)
         
         # Route decision
-        if complexity_score < 0.3:
+        if complexity_score < [file]:
             # Easy: Use small model
-            return self.small_model.generate(prompt), "1.5B", complexity_score
-        elif complexity_score < 0.7:
+            return [file][file](prompt), "[file]", complexity_score
+        elif complexity_score < [file]:
             # Medium: Use medium model
-            return self.medium_model.generate(prompt), "7B", complexity_score
+            return [file][file](prompt), "7B", complexity_score
         else:
             # Hard: Use large model
-            return self.large_model.generate(prompt), "33B", complexity_score
+            return [file][file](prompt), "33B", complexity_score
 
 class ComplexityEstimator:
     """Estimate prompt complexity."""
     
     def __init__(self):
         # Train small classifier on prompt features
-        self.classifier = train_complexity_classifier()
+        [file] = train_complexity_classifier()
     
     def estimate(self, prompt):
         """Return complexity score [0, 1]."""
-        features = self.extract_features(prompt)
-        complexity = self.classifier(features)
-        return complexity.item()
+        features = [file]_features(prompt)
+        complexity = [file](features)
+        return [file]()
     
     def extract_features(self, prompt):
         """Extract complexity indicators."""
         return {
-            'length': len(prompt.split()),
-            'vocab_diversity': len(set(prompt.split())) / len(prompt.split()),
+            'length': len([file]()),
+            'vocab_diversity': len(set([file]())) / len([file]()),
             'has_code': '```' in prompt or 'def ' in prompt,
             'has_math': any(c in prompt for c in ['∫', '∑', '∂']),
-            'question_words': sum(1 for w in ['how', 'why', 'explain'] if w in prompt.lower()),
+            'question_words': sum(1 for w in ['how', 'why', 'explain'] if w in [file]()),
         }
 
 # Usage
 router = ComplexityRouter()
 
 prompts = [
-    "What is 2+2?",  # Easy → 1.5B model
+    "What is 2+2?",  # Easy → [file] model
     "Explain quantum entanglement",  # Medium → 7B model
     "Derive the Navier-Stokes equations",  # Hard → 33B model
 ]
 
 for prompt in prompts:
-    response, model_used, complexity = router.route_request(prompt)
+    response, model_used, complexity = [file]_request(prompt)
     print(f"Prompt: {prompt}")
     print(f"Routed to: {model_used} (complexity: {complexity:.2f})")
     print(f"Response: {response}\n")
@@ -193,12 +193,12 @@ for prompt in prompts:
 
 **How to run**:
 ```bash
-python3 dynamic_routing.py
+python3 [script]
 ```
 
 ---
 
-### 3. `blackwell_profiling_guide.py` - NVIDIA GPU-Specific Profiling
+###  NVIDIA GPU-Specific Profiling
 
 **Purpose**: Profile inference on NVIDIA GPUs with architecture-specific metrics.
 
@@ -208,28 +208,28 @@ def profile_blackwell_inference(model, input_ids):
     
     # NVIDIA SMI metrics
     import pynvml
-    pynvml.nvmlInit()
-    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+    [file]()
+    handle = [file](0)
     
     # Start monitoring
-    start_power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000  # Watts
-    start_temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+    start_power = [file](handle) / 1000  # Watts
+    start_temp = [file](handle, [file]_TEMPERATURE_GPU)
     
     # Run inference
-    with torch.profiler.profile(
-        activities=[torch.profiler.ProfilerActivity.CUDA],
+    with [file].profile(
+        activities=[[file].[file]],
         record_shapes=True,
     ) as prof:
-        with torch.no_grad():
+        with [file]_grad():
             outputs = model(input_ids)
     
     # End monitoring
-    end_power = pynvml.nvmlDeviceGetPowerUsage(handle) / 1000
-    end_temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+    end_power = [file](handle) / 1000
+    end_temp = [file](handle, [file]_TEMPERATURE_GPU)
     
     # NVIDIA GPU-specific metrics
-    sm_util = pynvml.nvmlDeviceGetUtilizationRates(handle).gpu
-    mem_util = pynvml.nvmlDeviceGetUtilizationRates(handle).memory
+    sm_util = [file](handle).gpu
+    mem_util = [file](handle).memory
     
     print(f"NVIDIA GPU (modern compute capability) Metrics:")
     print(f"  SM Utilization: {sm_util}%")
@@ -238,7 +238,7 @@ def profile_blackwell_inference(model, input_ids):
     print(f"  Temperature: {end_temp}°C")
     
     # Tensor Core utilization
-    print(prof.key_averages().table(
+    print([file]_averages().table(
         sort_by="cuda_time_total",
         row_limit=10
     ))
@@ -246,12 +246,12 @@ def profile_blackwell_inference(model, input_ids):
 
 **How to run**:
 ```bash
-python3 blackwell_profiling_guide.py
+python3 [script]
 ```
 
 ---
 
-### 4. `blackwell_roofline_analysis.py` - Roofline Model
+###  Roofline Model
 
 **Purpose**: Analyze kernel performance against hardware roofline.
 
@@ -260,27 +260,27 @@ def roofline_analysis(model, input_data):
     """Generate roofline plot for kernels."""
     
     # Profile kernels
-    with torch.profiler.profile(
-        activities=[torch.profiler.ProfilerActivity.CUDA],
+    with [file].profile(
+        activities=[[file].[file]],
         record_shapes=True,
     ) as prof:
         outputs = model(input_data)
     
     # Extract metrics
     kernels = []
-    for event in prof.key_averages():
-        if event.device_type == torch.profiler.DeviceType.CUDA:
+    for event in [file]_averages():
+        if [file]_type == [file].[file]:
             # Calculate arithmetic intensity
             flops = estimate_flops(event)
             bytes_accessed = estimate_memory(event)
             arithmetic_intensity = flops / bytes_accessed if bytes_accessed > 0 else 0
             
             # Calculate achieved performance
-            cuda_time_ms = event.cuda_time_total / 1000
+            cuda_time_ms = [file]_time_total / 1000
             achieved_gflops = (flops / 1e9) / (cuda_time_ms / 1000)
             
-            kernels.append({
-                'name': event.key,
+            [file]({
+                'name': [file],
                 'arithmetic_intensity': arithmetic_intensity,
                 'achieved_gflops': achieved_gflops,
             })
@@ -290,49 +290,49 @@ def roofline_analysis(model, input_data):
 
 def plot_roofline(kernels, peak_bandwidth_gbs, peak_compute_tflops):
     """Plot kernels on roofline model."""
-    import matplotlib.pyplot as plt
+    import [file] as plt
     import numpy as np
     
     # Roofline boundaries
-    ai_range = np.logspace(-2, 3, 100)  # Arithmetic intensity range
+    ai_range = [file](-2, 3, 100)  # Arithmetic intensity range
     
     # Memory-bound region
     memory_bound = peak_bandwidth_gbs * ai_range
     
     # Compute-bound region
-    compute_bound = np.ones_like(ai_range) * peak_compute_tflops
+    compute_bound = [file]_like(ai_range) * peak_compute_tflops
     
     # Actual roofline (minimum of both)
-    roofline = np.minimum(memory_bound, compute_bound)
+    roofline = [file](memory_bound, compute_bound)
     
     # Plot
-    plt.figure(figsize=(10, 6))
-    plt.loglog(ai_range, roofline, 'k-', linewidth=2, label='Roofline')
+    [file](figsize=(10, 6))
+    [file](ai_range, roofline, 'k-', linewidth=2, label='Roofline')
     
     # Plot kernels
     for kernel in kernels:
-        plt.loglog(
+        [file](
             kernel['arithmetic_intensity'],
             kernel['achieved_gflops'],
             'ro', markersize=8
         )
     
-    plt.xlabel('Arithmetic Intensity (FLOP/Byte)')
-    plt.ylabel('Performance (GFLOPS)')
-    plt.title('Roofline Model - NVIDIA GPU (modern compute capability)')
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.savefig('roofline.png')
+    [file]('Arithmetic Intensity (FLOP/Byte)')
+    [file]('Performance (GFLOPS)')
+    [file]('Roofline Model - NVIDIA GPU (modern compute capability)')
+    [file](True, alpha=[file])
+    [file]()
+    [file]('[file]')
 ```
 
 **How to run**:
 ```bash
-python3 blackwell_roofline_analysis.py
+python3 [script]
 ```
 
 ---
 
-### 5. `comprehensive_profiling_toolkit.py` - All-in-One Profiling
+###  All-in-One Profiling
 
 **Purpose**: Comprehensive profiling toolkit for inference analysis.
 
@@ -341,42 +341,42 @@ class InferenceProfiler:
     """Comprehensive inference profiling."""
     
     def __init__(self, model, device='cuda'):
-        self.model = model
-        self.device = device
+        [file] = model
+        [file] = device
         
     def profile_all(self, input_data, output_dir='profiling_results'):
         """Run all profiling analyses."""
-        os.makedirs(output_dir, exist_ok=True)
+        [file](output_dir, exist_ok=True)
         
         # 1. Latency breakdown
         print("1. Profiling latency...")
-        latency_results = self.profile_latency(input_data)
-        self.save_results(latency_results, f"{output_dir}/latency.json")
+        latency_results = [file]_latency(input_data)
+        [file]_results(latency_results, f"{output_dir}/[file]")
         
         # 2. Memory usage
         print("2. Profiling memory...")
-        memory_results = self.profile_memory(input_data)
-        self.save_results(memory_results, f"{output_dir}/memory.json")
+        memory_results = [file]_memory(input_data)
+        [file]_results(memory_results, f"{output_dir}/[file]")
         
         # 3. Throughput at different batch sizes
         print("3. Profiling throughput...")
-        throughput_results = self.profile_throughput(input_data)
-        self.save_results(throughput_results, f"{output_dir}/throughput.json")
+        throughput_results = [file]_throughput(input_data)
+        [file]_results(throughput_results, f"{output_dir}/[file]")
         
         # 4. Roofline analysis
         print("4. Roofline analysis...")
-        self.roofline_analysis(input_data, f"{output_dir}/roofline.png")
+        [file]_analysis(input_data, f"{output_dir}/[file]")
         
         # 5. Generate report
         print("5. Generating report...")
-        self.generate_report(output_dir)
+        [file]_report(output_dir)
         
         print(f"\nProfiling complete! Results in {output_dir}/")
 ```
 
 **How to run**:
 ```bash
-python3 comprehensive_profiling_toolkit.py --model deepseek-coder-6.7b
+python3 [script] --model deepseek-coder-[file]
 ```
 
 ---
@@ -393,9 +393,9 @@ def batch_by_complexity(requests):
     complexities = [estimate_complexity(r) for r in requests]
     
     # Group into buckets
-    easy = [r for r, c in zip(requests, complexities) if c < 0.3]
-    medium = [r for r, c in zip(requests, complexities) if 0.3 <= c < 0.7]
-    hard = [r for r, c in zip(requests, complexities) if c >= 0.7]
+    easy = [r for r, c in zip(requests, complexities) if c < [file]]
+    medium = [r for r, c in zip(requests, complexities) if [file] <= c < [file]]
+    hard = [r for r, c in zip(requests, complexities) if c >= [file]]
     
     # Process each group with appropriate resources
     process_batch(easy, model='small', batch_size=64)
@@ -409,9 +409,9 @@ def batch_by_complexity(requests):
 def batch_by_latency_sla(requests):
     """Group by latency requirements."""
     
-    latency_critical = [r for r in requests if r.sla < 50]  # <50ms
-    latency_sensitive = [r for r in requests if 50 <= r.sla < 200]
-    batch_requests = [r for r in requests if r.sla >= 200]
+    latency_critical = [r for r in requests if [file] < 50]  # <50ms
+    latency_sensitive = [r for r in requests if 50 <= [file] < 200]
+    batch_requests = [r for r in requests if [file] >= 200]
     
     # Critical: Small batches, high priority
     process_batch(latency_critical, batch_size=1, priority=0)
@@ -431,27 +431,27 @@ def batch_by_latency_sla(requests):
 cd ch17
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
 # Early exit
-python3 early_rejection.py
+python3 [script]
 
 # Dynamic routing
-python3 dynamic_routing.py
+python3 [script]
 
 # NVIDIA GPU profiling
-python3 blackwell_profiling_guide.py
-python3 blackwell_roofline_analysis.py
+python3 [script]
+python3 [script]
 
 # Comprehensive toolkit
-python3 comprehensive_profiling_toolkit.py --model deepseek-coder-6.7b
+python3 [script] --model deepseek-coder-[file]
 ```
 
 ---
 
 ## Key Takeaways
 
-1. **Early exit saves compute**: 30-50% of requests can exit early → 1.5-2x average speedup.
+1. **Early exit saves compute**: 30-50% of requests can exit early → [file]-2x average speedup.
 
 2. **Dynamic routing optimizes cost**: Route easy requests to small models → 3-5x cost reduction.
 
@@ -493,22 +493,22 @@ python3 comprehensive_profiling_toolkit.py --model deepseek-coder-6.7b
 
 ## Next Steps
 
-**Attention optimization** → [Chapter 18: Attention Mechanisms](../ch18/README.md)
+**Attention optimization** → [Chapter 18: Attention Mechanisms](.[executable]/[file])
 
 Learn about:
 - FlexAttention for flexible patterns
 - FlashAttention for memory efficiency
 - MLA (Multi-head Latent Attention) kernels
 
-**Back to inference** → [Chapter 16: Inference Optimization](../ch16/README.md)
+**Back to inference** → [Chapter 16: Inference Optimization](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **Early Exit**: [BERxiT Paper](https://arxiv.org/abs/2006.04152)
-- **Adaptive Inference**: [Dynamic Neural Networks Survey](https://arxiv.org/abs/2102.04906)
-- **Roofline Model**: [Roofline Paper](https://people.eecs.berkeley.edu/~kubitron/cs252/handouts/papers/RooflineVyNoYellow.pdf)
+- **Early Exit**: [BERxiT Paper](https://[file]/abs/[file])
+- **Adaptive Inference**: [Dynamic Neural Networks Survey](https://[file]/abs/[file])
+- **Roofline Model**: [Roofline Paper](https://[file].[file]/~kubitron/cs252/handouts/papers/[file])
 
 ---
 

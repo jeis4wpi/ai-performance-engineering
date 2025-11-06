@@ -34,7 +34,9 @@ def _run_nsys_stats(rep_path: pathlib.Path) -> List[Dict[str, str]]:
             str(rep_path),
         ]
         try:
-            subprocess.run(command, capture_output=True, text=True, check=True)
+            subprocess.run(command, capture_output=True, text=True, check=True, timeout=60)  # 60s - extraction can be slow for large files
+        except subprocess.TimeoutExpired:
+            raise SystemExit(f"nsys stats timed out after 60s for {rep_path} (file may be very large)")
         except FileNotFoundError as exc:
             raise SystemExit("nsys binary not found on PATH; install Nsight Systems to extract summaries") from exc
         except subprocess.CalledProcessError as exc:

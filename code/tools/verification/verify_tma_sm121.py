@@ -386,7 +386,7 @@ def test_cuda_tma_compilation() -> str:
             compile_cmd,
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=15  # 15 second timeout to prevent hangs
         )
         
         if result.returncode == 0:
@@ -403,7 +403,7 @@ def test_cuda_tma_compilation() -> str:
                     [output_binary],
                     capture_output=True,
                     text=True,
-                    timeout=120,
+                    timeout=15,  # 15 second timeout to prevent hangs
                     env=run_env
                 )
                 if run_result.returncode == 0:

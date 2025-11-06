@@ -1,0 +1,44 @@
+"""Python harness wrapper for ch7's optimized_copy_coalesced.cu."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+repo_root = Path(__file__).parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
+from common.python.benchmark_harness import BenchmarkHarness, BenchmarkMode
+from common.python.cuda_binary_benchmark import CudaBinaryBenchmark
+
+
+class OptimizedCopyCoalescedBenchmark(CudaBinaryBenchmark):
+    """Wraps the coalesced copy kernel."""
+
+    def __init__(self) -> None:
+        chapter_dir = Path(__file__).parent
+        super().__init__(
+            chapter_dir=chapter_dir,
+            binary_name="optimized_copy_coalesced",
+            friendly_name="Ch7 Coalesced Copy",
+            iterations=3,
+            warmup=1,
+            timeout_seconds=90,
+            time_regex=None,
+        )
+
+
+def get_benchmark() -> OptimizedCopyCoalescedBenchmark:
+    """Factory for discover_benchmarks()."""
+    return OptimizedCopyCoalescedBenchmark()
+
+
+if __name__ == "__main__":
+    benchmark = get_benchmark()
+    harness = BenchmarkHarness(
+        mode=BenchmarkMode.CUSTOM,
+        config=benchmark.get_config(),
+    )
+    result = harness.benchmark(benchmark)
+    print(f"\nCh7 Coalesced Copy (optimized): {result.mean_ms:.3f} ms")

@@ -19,8 +19,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 7: Memory Access](../ch7/README.md) - memory bandwidth limits
-- [Chapter 8: Occupancy/ILP](../ch8/README.md) - optimization fundamentals
+- [Chapter 7: Memory Access](.[executable]/README.md) - memory bandwidth limits
+- [Chapter 8: Occupancy/ILP](.[executable]/README.md) - optimization fundamentals
 
 **Required**: Understanding of memory hierarchy and FLOP counting
 
@@ -117,13 +117,13 @@ Compute-bound region: AI > 250
 Use `ncu` (Nsight Compute) to measure actual AI:
 
 ```bash
-ncu --metrics dram__bytes.sum.per_second,smsp__sass_thread_inst_executed_op_fadd_pred_on.sum,smsp__sass_thread_inst_executed_op_fmul_pred_on.sum ./my_kernel
+ncu --metrics dram__bytes.sum.per_second,smsp__sass_thread_inst_executed_op_fadd_pred_on.sum,smsp__sass_thread_inst_executed_op_fmul_pred_on.sum [executable]
 
 # Calculate AI from metrics:
 # AI = (FADD + FMUL) / DRAM_bytes
 ```
 
-**Note**: For a practical implementation of roofline analysis with Python, see [Chapter 1: Performance Basics](../ch1/README.md#4-roofline_analysispy---roofline-performance-model).
+**Note**: For a practical implementation of roofline analysis with Python, see [Chapter 1: Performance Basics](.[executable]/README.md#4-roofline_analysispy---roofline-performance-model).
 
 ---
 
@@ -213,7 +213,7 @@ Tiled:  AI = 32 FLOP/Byte,    256 GFLOPS (12% of peak)
 Speedup: 5.7x [OK]
 ```
 
-### Example: `micro_tiling_matmul.cu`
+### Example: `[CUDA file]` (see source files for implementation)
 
 This example demonstrates the **multilevel microtiling** technique described in the book (Ch9, "Multilevel Microtiling and Software Prefetching"). It shows three implementations with progressively higher arithmetic intensity:
 
@@ -331,7 +331,6 @@ Register-tiled:  78 TFLOPS,   AI = 256 FLOP/Byte  (31x speedup)
 **How to run**:
 ```bash
 make micro_tiling_matmul
-./micro_tiling_matmul_sm100
 ```
 
 **Expected output**:
@@ -424,7 +423,7 @@ After fusion (3 ops):
   Performance = 12 TFLOPS (3x better)
 ```
 
-### Example: `fusion_pytorch.py`
+### Example: [source file]
 
 **Purpose**: Demonstrate PyTorch's automatic fusion with torch.compile and custom fusion.
 
@@ -449,7 +448,7 @@ y = fused(x)  # 3-4x faster!
 
 **How to run**:
 ```bash
-python3 fusion_pytorch.py
+python3 [script]
 ```
 
 **Expected output**:
@@ -460,7 +459,7 @@ Speedup: 3.3x [OK]
 Roofline: Moved right (higher AI)
 ```
 
-### Example: `fused_l2norm.cu`
+### Example: `[CUDA file]` (see source files for implementation)
 
 **Purpose**: Implement fused L2 normalization kernel.
 
@@ -520,7 +519,6 @@ Speedup: 2.5x [OK]
 **How to run**:
 ```bash
 make fused_l2norm
-./fused_l2norm_sm100
 ```
 
 ### Fusion Opportunities
@@ -632,13 +630,13 @@ out[i] = b[i] * (x*x*x*x + 2*x*x*x + 3*x*x + 4*x + 5);
 
 **Use case**: When additional computation is needed (e.g., activation functions, normalization).
 
-**Note**: For a complete demonstration of AI tuning techniques (baseline, unrolled, vectorized, increased FLOPs, fused), see [Chapter 1: Performance Basics](../ch1/README.md#6-arithmetic_intensity_demo_sm100---kernel-optimization-strategies).
+**Note**: For a complete demonstration of AI tuning techniques (baseline, unrolled, vectorized, increased FLOPs, fused), see [Chapter 1: Performance Basics](.[executable]/README.md#6-arithmetic_intensity_demo_sm100---kernel-optimization-strategies).
 
 ---
 
 ## Additional Examples
 
-### CUTLASS Integration: `cutlass_gemm_example.cu`
+### CUTLASS Integration: `[CUDA file]` (see source files for implementation)
 
 **Purpose**: Use NVIDIA CUTLASS library for highly optimized GEMM with maximum AI.
 
@@ -673,10 +671,9 @@ gemm_op({M, N, K}, {A, lda}, {B, ldb}, {C, ldc}, {C, ldc}, {alpha, beta});
 **How to run**:
 ```bash
 make cutlass_gemm_example
-./cutlass_gemm_example_sm100
 ```
 
-### Inline PTX: `inline_ptx_example.cu`
+### Inline PTX: [source file]
 
 **Purpose**: Use inline PTX for architecture-specific optimizations.
 
@@ -688,10 +685,9 @@ make cutlass_gemm_example
 **How to run**:
 ```bash
 make inline_ptx_example
-./inline_ptx_example_sm100
 ```
 
-### Pipelined Fusion: `two_stage_pipeline.cu`
+### Pipelined Fusion: [source file]
 
 **Purpose**: Demonstrate producer-consumer fusion with double buffering.
 
@@ -700,7 +696,6 @@ make inline_ptx_example
 **How to run**:
 ```bash
 make two_stage_pipeline
-./two_stage_pipeline_sm100
 ```
 
 ---
@@ -714,22 +709,14 @@ cd ch9
 make
 
 # Run optimization demos
-./micro_tiling_matmul_sm100      # Multilevel microtiling (main example from book)
-./fused_l2norm_sm100             # Kernel fusion
-./cutlass_gemm_example_sm100     # CUTLASS
-./two_stage_pipeline_sm100       # Pipelined fusion
 
 # PyTorch examples
 pip install -r requirements.txt
-python3 fusion_pytorch.py
+python3 [script]
 
 # Profile to measure AI
-ncu --metrics dram__bytes.sum,smsp__sass_thread_inst_executed_op_fadd_pred_on.sum ./micro_tiling_matmul_sm100
-
-# For roofline analysis basics, see Chapter 1
-cd ../ch1 && python3 roofline_analysis.py
-cd ../ch1 && ./arithmetic_intensity_demo_sm100
-```
+ncu --metrics dram__bytes.sum,smsp__sass_thread_inst_executed_op_fadd_pred_on.sum cd .[executable] && python3 [script]
+cd .[executable] && ```
 
 ---
 
@@ -796,7 +783,7 @@ cd ../ch1 && ./arithmetic_intensity_demo_sm100
 
 ## Next Steps
 
-**Master tensor cores** → [Chapter 10: Tensor Cores and Pipelines](../ch10/README.md)
+**Master tensor cores** → [Chapter 10: Tensor Cores and Pipelines](.[executable]/README.md)
 
 Learn about:
 - `tcgen05.mma` (NVIDIA GPU 5th-gen Tensor Cores)
@@ -804,7 +791,7 @@ Learn about:
 - Double-buffered pipelines for 2x throughput
 - Achieving peak AI at ridge point with Tensor Cores
 
-**Back to memory** → [Chapter 7: Memory Access Patterns](../ch7/README.md)
+**Back to memory** → [Chapter 7: Memory Access Patterns](.[executable]/README.md)
 
 ---
 

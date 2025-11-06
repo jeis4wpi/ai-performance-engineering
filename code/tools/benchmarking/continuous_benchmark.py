@@ -35,7 +35,19 @@ def run_command(job: Dict) -> Dict:
     output_path = job.get("output_json")
 
     start = time.time()
-    result = subprocess.run(command, cwd=workdir, capture_output=True, text=True)
+    try:
+        result = subprocess.run(command, cwd=workdir, capture_output=True, text=True, timeout=15)
+    except subprocess.TimeoutExpired:
+        return {
+            "name": job.get("name", "benchmark"),
+            "command": command,
+            "workdir": str(workdir),
+            "returncode": -1,
+            "stdout": "",
+            "stderr": f"Command timed out after 15 seconds",
+            "duration_sec": 15.0,
+            "timeout": True,
+        }
     duration = time.time() - start
 
     payload = {

@@ -15,7 +15,7 @@ NVSHMEM_TARGETS = nvshmem_8gpu_examples nvshmem_advanced_8gpu nvshmem_multinode_
                   nvshmem_pipeline_patterns nvshmem_tensor_parallel
 TARGETS = $(addsuffix $(SUFFIX), $(NVSHMEM_TARGETS))
 
-.PHONY: all help nvshmem compare clean install-help blackwell grace-blackwell $(TARGETS)
+.PHONY: all help nvshmem compare clean install-help b200 gb10 b300 gb300 $(TARGETS)
 
 all: help
 	@echo ""
@@ -105,11 +105,17 @@ compare: clean
 		$(MAKE) ARCH=$${arch} nvshmem; \
 	done
 
-blackwell: ARCH=sm_100
-blackwell: clean nvshmem
+b200: ARCH=sm_100
+b200: clean nvshmem
 
-grace-blackwell: ARCH=sm_121
-grace-blackwell: clean nvshmem
+gb10: ARCH=sm_121
+gb10: clean nvshmem
+
+b300: ARCH=sm_103
+b300: clean nvshmem
+
+gb300: ARCH=sm_103
+gb300: clean nvshmem
 
 clean:
 	rm -f $(addsuffix _sm100,$(NVSHMEM_TARGETS)) $(addsuffix _sm121,$(NVSHMEM_TARGETS))

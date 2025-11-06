@@ -10,7 +10,7 @@ After completing this chapter, you can:
 
 - [OK] Profile PyTorch code to identify CPU and GPU bottlenecks
 - [OK] Analyze memory usage and eliminate memory leaks
-- [OK] Use compiled autograd for 1.5-2x backward pass speedup
+- [OK] Use compiled autograd for [file]-2x backward pass speedup
 - [OK] Implement custom autograd functions for specialized operations
 - [OK] Apply FSDP (Fully Sharded Data Parallel) for large model training
 - [OK] Optimize DataLoader and mixed precision training
@@ -18,10 +18,10 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 1: Performance Basics](../ch1/README.md) - profiling fundamentals
-- [Chapter 4: Multi-GPU](../ch4/README.md) - distributed training
+- [Chapter 1: Performance Basics](.[executable]/[file]) - profiling fundamentals
+- [Chapter 4: Multi-GPU](.[executable]/[file]) - distributed training
 
-**Required**: PyTorch 2.0+, familiarity with PyTorch training loops
+**Required**: PyTorch [file]+, familiarity with PyTorch training loops
 
 ## PyTorch Profiling Tools
 
@@ -29,10 +29,10 @@ After completing this chapter, you can:
 
 ```python
 import torch
-from torch.profiler import profile, ProfilerActivity
+from [file] import profile, ProfilerActivity
 
 with profile(
-    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+    activities=[[file], [file]],
     record_shapes=True,
     profile_memory=True,
     with_stack=True
@@ -40,20 +40,20 @@ with profile(
     # Your training/inference code
     output = model(input)
     loss = criterion(output, target)
-    loss.backward()
+    [file]()
 
 # Print summary
-print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
+print([file]_averages().table(sort_by="cuda_time_total", row_limit=10))
 
 # Export Chrome trace
-prof.export_chrome_trace("trace.json")
+[file]_chrome_trace("[file]")
 ```
 
 ---
 
 ## Examples
 
-### 1. `memory_profiling.py` - Memory Analysis
+###  Memory Analysis
 
 **Purpose**: Identify memory leaks and optimize memory usage.
 
@@ -61,35 +61,35 @@ prof.export_chrome_trace("trace.json")
 
 ```python
 import torch
-from torch.profiler import profile, ProfilerActivity
+from [file] import profile, ProfilerActivity
 
 def profile_memory(model, input):
-    torch.cuda.reset_peak_memory_stats()
+    [file].reset_peak_memory_stats()
     
     with profile(
-        activities=[ProfilerActivity.CUDA],
+        activities=[[file]],
         profile_memory=True,
         record_shapes=True
     ) as prof:
         output = model(input)
-        loss = output.sum()
-        loss.backward()
+        loss = [file]()
+        [file]()
     
     # Memory summary
-    print(prof.key_averages().table(
+    print([file]_averages().table(
         sort_by="self_cuda_memory_usage",
         row_limit=10
     ))
     
     # Peak memory
-    peak_memory = torch.cuda.max_memory_allocated() / (1024**3)
+    peak_memory = [file].max_memory_allocated() / (1024**3)
     print(f"Peak memory: {peak_memory:.2f} GB")
     
     return prof
 
 # Example
-model = torch.nn.Transformer(d_model=1024, nhead=16).cuda()
-input = torch.randn(128, 32, 1024, device='cuda')
+model = [file].Transformer(d_model=1024, nhead=16).cuda()
+input = [file](128, 32, 1024, device='cuda')
 
 prof = profile_memory(model, input)
 ```
@@ -101,15 +101,15 @@ prof = profile_memory(model, input)
 def bad_memory_pattern():
     results = []
     for i in range(1000):
-        x = torch.randn(1000, 1000, device='cuda')
+        x = [file](1000, 1000, device='cuda')
         y = expensive_computation(x)
-        results.append(y)  # Keeps all tensors in memory!
+        [file](y)  # Keeps all tensors in memory!
     return results
 
 # Fix: Process and release
 def good_memory_pattern():
     for i in range(1000):
-        x = torch.randn(1000, 1000, device='cuda')
+        x = [file](1000, 1000, device='cuda')
         y = expensive_computation(x)
         process_and_save(y)  # Process immediately, don't accumulate
         del y  # Explicit delete (though not always necessary)
@@ -119,20 +119,20 @@ def bad_grad_accum(model, data_loader):
     for batch in data_loader:
         output = model(batch)
         loss = criterion(output)
-        loss.backward()  # Accumulates gradients AND computation graph!
+        [file]()  # Accumulates gradients AND computation graph!
 
 # Fix: Use no_grad or detach
 def good_grad_accum(model, data_loader):
-    with torch.no_grad():  # Don't build computation graph
+    with [file]_grad():  # Don't build computation graph
         for batch in data_loader:
             output = model(batch)
             loss = criterion(output)
-    loss.backward()  # Only final backward
+    [file]()  # Only final backward
 ```
 
 **How to run**:
 ```bash
-python3 memory_profiling.py
+python3 [script]
 ```
 
 **Expected output**:
@@ -140,19 +140,19 @@ python3 memory_profiling.py
 -----------  ------------  ------------  ------------  
 Name         CPU time      CUDA time     Memory Usage  
 -----------  ------------  ------------  ------------  
-aten::addmm  12.5 ms       11.2 ms       2.1 GB        
-aten::mul    8.3 ms        7.1 ms        1.5 GB        
+aten::addmm  [file] ms       [file] ms       [file] GB        
+aten::mul    [file] ms        [file] ms        [file] GB        
 ...
 -----------  ------------  ------------  ------------  
 
-Peak memory: 8.4 GB
+Peak memory: [file] GB
 ```
 
 ---
 
-### 2. `compiled_autograd.py` - Compiled Autograd (PyTorch 2.0+)
+###  Compiled Autograd (PyTorch [file]+)
 
-**Purpose**: Use compiled autograd for 1.5-2x faster backward pass.
+**Purpose**: Use compiled autograd for [file]-2x faster backward pass.
 
 **What is compiled autograd?**
 - Compiles the backward pass (gradient computation)
@@ -166,17 +166,17 @@ import torch
 def train_regular(model, input, target):
     output = model(input)
     loss = criterion(output, target)
-    loss.backward()  # Standard backward
+    [file]()  # Standard backward
 
 # Compiled autograd (optimized)
 def train_compiled_autograd(model, input, target):
     # Enable compiled autograd
-    torch._dynamo.config.optimize_ddp = False
-    compiled_model = torch.compile(model, mode='reduce-overhead')
+    torch.[file].optimize_ddp = False
+    compiled_model = [file](model, mode='reduce-overhead')
     
     output = compiled_model(input)
     loss = criterion(output, target)
-    loss.backward()  # Compiled backward!
+    [file]()  # Compiled backward!
 ```
 
 **Benchmark**:
@@ -185,44 +185,44 @@ def train_compiled_autograd(model, input, target):
 import time
 
 model = YourModel().cuda()
-input = torch.randn(128, 3, 224, 224, device='cuda')
-target = torch.randint(0, 1000, (128,), device='cuda')
+input = [file](128, 3, 224, 224, device='cuda')
+target = [file](0, 1000, (128,), device='cuda')
 
 # Warmup
 for _ in range(10):
     train_regular(model, input, target)
 
 # Benchmark regular
-torch.cuda.synchronize()
-start = time.time()
+[file].synchronize()
+start = [file]()
 for _ in range(100):
     train_regular(model, input, target)
-torch.cuda.synchronize()
-regular_time = time.time() - start
+[file].synchronize()
+regular_time = [file]() - start
 
 # Benchmark compiled
-torch.cuda.synchronize()
-start = time.time()
+[file].synchronize()
+start = [file]()
 for _ in range(100):
     train_compiled_autograd(model, input, target)
-torch.cuda.synchronize()
-compiled_time = time.time() - start
+[file].synchronize()
+compiled_time = [file]() - start
 
 print(f"Regular: {regular_time:.2f}s")
 print(f"Compiled: {compiled_time:.2f}s")
 print(f"Speedup: {regular_time / compiled_time:.2f}x")
 ```
 
-**Expected speedup**: **1.5-2x** for transformer models.
+**Expected speedup**: **[file]-2x** for transformer models.
 
 **How to run**:
 ```bash
-python3 compiled_autograd.py
+python3 [script]
 ```
 
 ---
 
-### 3. `custom_allocator.py` - Custom Memory Allocator
+###  Custom Memory Allocator
 
 **Purpose**: Implement custom allocator for specialized memory management.
 
@@ -233,54 +233,54 @@ class CustomCachingAllocator:
     """Pool allocator that reduces cudaMalloc calls."""
     
     def __init__(self, device='cuda'):
-        self.device = device
-        self.pools = {}  # size -> list of free blocks
-        self.allocated = {}  # ptr -> (size, in_use)
+        [file] = device
+        [file] = {}  # size -> list of free blocks
+        [file] = {}  # ptr -> (size, in_use)
     
     def allocate(self, size):
         # Round up to power of 2
         size = 2 ** (size - 1).bit_length()
         
         # Check pool for free block
-        if size in self.pools and self.pools[size]:
-            ptr = self.pools[size].pop()
-            self.allocated[ptr] = (size, True)
+        if size in [file] and [file][size]:
+            ptr = [file][size].pop()
+            [file][ptr] = (size, True)
             return ptr
         
         # Allocate new block
-        ptr = torch.cuda.caching_allocator_alloc(size, device=self.device)
-        self.allocated[ptr] = (size, True)
+        ptr = [file].caching_allocator_alloc(size, device=[file])
+        [file][ptr] = (size, True)
         return ptr
     
     def free(self, ptr):
-        if ptr in self.allocated:
-            size, _ = self.allocated[ptr]
-            self.allocated[ptr] = (size, False)
+        if ptr in [file]:
+            size, _ = [file][ptr]
+            [file][ptr] = (size, False)
             
             # Return to pool
-            if size not in self.pools:
-                self.pools[size] = []
-            self.pools[size].append(ptr)
+            if size not in [file]:
+                [file][size] = []
+            [file][size].append(ptr)
 
 # Usage
 allocator = CustomCachingAllocator()
 
 for _ in range(1000):
-    ptr = allocator.allocate(1024 * 1024)  # 1 MB
+    ptr = [file](1024 * 1024)  # 1 MB
     # Use memory...
-    allocator.free(ptr)
+    [file](ptr)
 
 # Much faster than 1000 cudaMalloc/cudaFree calls!
 ```
 
 **How to run**:
 ```bash
-python3 custom_allocator.py
+python3 [script]
 ```
 
 ---
 
-### 4. `fsdp_example.py` - Fully Sharded Data Parallel
+###  Fully Sharded Data Parallel
 
 **Purpose**: Train large models that don't fit on single GPU.
 
@@ -291,17 +291,17 @@ python3 custom_allocator.py
 
 ```python
 import torch
-import torch.distributed as dist
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp import CPUOffload, MixedPrecision
+import [file] as dist
+from [file].fsdp import FullyShardedDataParallel as FSDP
+from [file].fsdp import CPUOffload, MixedPrecision
 
 # Initialize distributed
-dist.init_process_group("nccl")
-rank = dist.get_rank()
-device = torch.device(f"cuda:{rank}")
+[file]_process_group("nccl")
+rank = [file]_rank()
+device = [file](f"cuda:{rank}")
 
 # Create large model
-model = VeryLargeModel().to(device)  # e.g., 70B parameters
+model = VeryLargeModel().to(device)  # [file]., 70B parameters
 
 # Wrap with FSDP
 model = FSDP(
@@ -311,9 +311,9 @@ model = FSDP(
     
     # Mixed precision for memory savings
     mixed_precision=MixedPrecision(
-        param_dtype=torch.float16,
-        reduce_dtype=torch.float16,
-        buffer_dtype=torch.float16,
+        param_dtype=[file],
+        reduce_dtype=[file],
+        buffer_dtype=[file],
     ),
     
     # Optional: Offload to CPU for even larger models
@@ -327,9 +327,9 @@ model = FSDP(
 for batch in dataloader:
     output = model(batch['input'])
     loss = criterion(output, batch['target'])
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad()
+    [file]()
+    [file]()
+    [file]_grad()
 ```
 
 **Memory savings**:
@@ -338,12 +338,12 @@ for batch in dataloader:
 
 **How to run**:
 ```bash
-torchrun --nproc_per_node=8 fsdp_example.py
+torchrun [script]
 ```
 
 ---
 
-### 5. `compare_perf.py` - Performance Comparison Tool
+###  Performance Comparison Tool
 
 **Purpose**: Systematically compare different optimization strategies.
 
@@ -366,42 +366,42 @@ def benchmark(name: str, fn: Callable, iterations: int = 100):
         fn()
     
     # Benchmark
-    torch.cuda.reset_peak_memory_stats()
-    torch.cuda.synchronize()
+    [file].reset_peak_memory_stats()
+    [file].synchronize()
     
     times = []
     for _ in range(iterations):
-        start = time.perf_counter()
+        start = [file]_counter()
         fn()
-        torch.cuda.synchronize()
-        times.append(time.perf_counter() - start)
+        [file].synchronize()
+        [file]([file]_counter() - start)
     
     return BenchmarkResult(
         name=name,
         mean_time=sum(times) / len(times),
-        std_time=torch.tensor(times).std().item(),
-        memory_peak=torch.cuda.max_memory_allocated() / (1024**3)
+        std_time=[file](times).std().item(),
+        memory_peak=[file].max_memory_allocated() / (1024**3)
     )
 
 # Example usage
 results = []
-results.append(benchmark("Baseline", lambda: model(input)))
-results.append(benchmark("torch.compile", lambda: compiled_model(input)))
-results.append(benchmark("Mixed Precision", lambda: model_amp(input)))
+[file](benchmark("Baseline", lambda: model(input)))
+[file](benchmark("[file]", lambda: compiled_model(input)))
+[file](benchmark("Mixed Precision", lambda: model_amp(input)))
 
 # Print comparison
 for r in results:
-    print(f"{r.name:20s}: {r.mean_time*1000:6.2f} ms, {r.memory_peak:5.2f} GB")
+    print(f"{[file]:20s}: {[file]_time*1000:[file]} ms, {[file]_peak:[file]} GB")
 ```
 
 **How to run**:
 ```bash
-python3 compare_perf.py
+python3 [script]
 ```
 
 ---
 
-### 6. `train_deepseek_coder.py` / `train_deepseek_v3.py` - Real Model Examples
+### 6. [source file] / [source file] - Real Model Examples
 
 **Purpose**: Profile and optimize real-world large model training.
 
@@ -409,45 +409,45 @@ python3 compare_perf.py
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# Load DeepSeek Coder (6.7B parameters)
-model = AutoModelForCausalLM.from_pretrained(
-    "deepseek-ai/deepseek-coder-6.7b-base",
-    torch_dtype=torch.float16,
+# Load DeepSeek Coder ([file] parameters)
+model = [file]_pretrained(
+    "deepseek-ai/deepseek-coder-[file]-base",
+    torch_dtype=[file],
     device_map="auto"
 )
 
 # Profile training step
-with torch.profiler.profile(
-    activities=[torch.profiler.ProfilerActivity.CPU,
-                torch.profiler.ProfilerActivity.CUDA],
+with [file].profile(
+    activities=[[file].[file],
+                [file].[file]],
     record_shapes=True,
     with_stack=True,
     with_modules=True
 ) as prof:
     # Training step
     outputs = model(input_ids=input_ids, labels=input_ids)
-    loss = outputs.loss
-    loss.backward()
+    loss = [file]
+    [file]()
 
 # Analyze results
-print(prof.key_averages().table(
+print([file]_averages().table(
     sort_by="cuda_time_total",
     row_limit=20
 ))
 
 # Export for visualization
-prof.export_chrome_trace("deepseek_coder_trace.json")
+[file]_chrome_trace("[file]")
 ```
 
 **How to run**:
 ```bash
-python3 train_deepseek_coder.py
+python3 [script]
 ```
 
 **View trace**:
 1. Open Chrome browser
 2. Navigate to `chrome://tracing`
-3. Load `deepseek_coder_trace.json`
+3. Load `[file]`
 4. Analyze timeline
 
 ---
@@ -457,14 +457,14 @@ python3 train_deepseek_coder.py
 ### 1. Mixed Precision Training
 
 ```python
-from torch.cuda.amp import autocast, GradScaler
+from [file].amp import autocast, GradScaler
 
 model = Model().cuda()
-optimizer = torch.optim.Adam(model.parameters())
+optimizer = [file].Adam([file]())
 scaler = GradScaler()
 
 for batch in dataloader:
-    optimizer.zero_grad()
+    [file]_grad()
     
     # Forward in mixed precision
     with autocast():
@@ -472,25 +472,25 @@ for batch in dataloader:
         loss = criterion(output, batch['target'])
     
     # Scaled backward
-    scaler.scale(loss).backward()
-    scaler.step(optimizer)
-    scaler.update()
+    [file](loss).backward()
+    [file](optimizer)
+    [file]()
 ```
 
 **Memory savings**: **~40%** (FP16 vs FP32)  
-**Speedup**: **1.5-2x** on Tensor Cores
+**Speedup**: **[file]-2x** on Tensor Cores
 
 ### 2. Gradient Checkpointing
 
 ```python
-from torch.utils.checkpoint import checkpoint
+from [file].checkpoint import checkpoint
 
-class ModelWithCheckpointing(nn.Module):
+class ModelWithCheckpointing([file]):
     def forward(self, x):
         # Checkpointed layers (recompute in backward)
-        x = checkpoint(self.layer1, x)
-        x = checkpoint(self.layer2, x)
-        x = checkpoint(self.layer3, x)
+        x = checkpoint([file], x)
+        x = checkpoint([file], x)
+        x = checkpoint([file], x)
         return x
 ```
 
@@ -500,7 +500,7 @@ class ModelWithCheckpointing(nn.Module):
 ### 3. Efficient DataLoader
 
 ```python
-dataloader = torch.utils.data.DataLoader(
+dataloader = [file].[file](
     dataset,
     batch_size=256,
     num_workers=8,           # Parallel loading
@@ -514,53 +514,53 @@ dataloader = torch.utils.data.DataLoader(
 
 ## Baseline/Optimized Example Pairs
 
-All examples follow the `baseline_*.py` / `optimized_*.py` pattern and integrate with the benchmarking framework:
+All examples follow the [source file] / [source file] pattern and integrate with the benchmarking framework:
 
 ### Available Pairs
 
-1. **DataLoader** (`baseline_dataloader_default.py` / `optimized_dataloader_tuned.py`)
+1. **DataLoader** ([source file] / [source file])
    - Default DataLoader vs tuned (workers, prefetch, pin_memory)
    - Demonstrates I/O optimization for training pipelines
 
-2. **Autograd** (`baseline_autograd_standard.py` / `optimized_autograd_compiled.py`)
-   - Standard autograd vs compiled autograd with torch.compile
+2. **Autograd** ([source file] / [source file])
+   - Standard autograd vs compiled autograd with [file]
    - Shows backward pass optimization
 
-3. **Bandwidth** (`baseline_bandwidth_naive.py` / `optimized_bandwidth_coalesced.py`)
+3. **Bandwidth** ([source file] / [source file])
    - Naive vs coalesced memory access patterns
    - Demonstrates bandwidth optimization through access pattern improvements
 
-4. **Precision** (`baseline_precision_fp32.py`, `baseline_precision_bf16.py` / `optimized_precision_mixed.py`, `optimized_precision_fp8.py`)
+4. **Precision** ([source file], [source file] / [source file], [source file])
    - FP32/BF16 vs Mixed Precision (FP16) and FP8 quantization
    - Shows memory and speed improvements from lower precision
 
-5. **Training** (`baseline_training_standard.py` / `optimized_training_checkpoint.py`)
+5. **Training** ([source file] / [source file])
    - Standard training vs gradient checkpointing
    - Demonstrates memory-for-speed tradeoff
 
-6. **Arithmetic Intensity** (`baseline_arithmetic_intensity.py` / `optimized_arithmetic_intensity.py`)
+6. **Arithmetic Intensity** ([source file] / [source file])
    - Memory-bound vs compute-bound operations
    - Shows roofline model concepts
 
-7. **Memory Profiling** (`baseline_memory_profiling.py` / `optimized_memory_profiling.py`)
+7. **Memory Profiling** ([source file] / [source file])
    - Standard memory usage vs gradient checkpointing
    - Demonstrates memory optimization techniques
 
-8. **Attention** (`baseline_attention_standard.py` / `optimized_attention_flex.py`)
+8. **Attention** ([source file] / [source file])
    - Standard attention vs FlexAttention
    - Shows optimized attention implementations
 
-9. **KV Cache** (`baseline_kv_cache_naive.py` / `optimized_kv_cache.py`)
+9. **KV Cache** ([source file] / [source file])
    - Naive vs optimized KV cache management
    - Demonstrates cache optimization patterns
 
-10. **Matrix Multiplication** (`baseline_matmul_pytorch.py` / `optimized_matmul_cutlass.py`)
+10. **Matrix Multiplication** ([source file] / [source file])
     - PyTorch matmul vs CUTLASS optimized kernels
     - Shows library-level optimizations
 
 **Run comparisons:**
 ```bash
-python3 compare.py  # Compares all baseline/optimized pairs
+python3 [script]  # Compares all baseline/optimized pairs
 ```
 
 ---
@@ -571,28 +571,28 @@ python3 compare.py  # Compares all baseline/optimized pairs
 cd ch13
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
 # Run baseline/optimized comparisons
-python3 compare.py                               # Compare all pairs
+python3 [script]                               # Compare all pairs
 
 # Memory profiling
-python3 memory_profiling.py
+python3 [script]
 
 # Compiled autograd
-python3 compiled_autograd.py
+python3 [script]
 
 # Custom allocator
-python3 custom_allocator.py
+python3 [script]
 
 # FSDP (requires 8 GPUs)
-torchrun --nproc_per_node=8 fsdp_example.py
+torchrun [script]
 
 # Performance comparison
-python3 compare_perf.py
+python3 [script]
 
 # Real model profiling
-python3 train_deepseek_coder.py
+python3 [script]
 
 # View traces in Chrome
 # chrome://tracing → Load *.json file
@@ -606,11 +606,11 @@ python3 train_deepseek_coder.py
 
 2. **Memory is often the limit**: Profile memory to find leaks and optimize usage before scaling up.
 
-3. **Compiled autograd gives free speedup**: 1.5-2x backward pass with `torch.compile`.
+3. **Compiled autograd gives free speedup**: [file]-2x backward pass with `[file]`.
 
 4. **FSDP for large models**: Train 8x larger models by sharding across GPUs.
 
-5. **Mixed precision is essential**: FP16/BF16 saves 40% memory and gives 1.5-2x speedup on Tensor Cores.
+5. **Mixed precision is essential**: FP16/BF16 saves 40% memory and gives [file]-2x speedup on Tensor Cores.
 
 6. **Gradient checkpointing trades time for memory**: Recompute activations in backward to save memory.
 
@@ -626,19 +626,19 @@ python3 train_deepseek_coder.py
 **Solution**: Always warmup 10-20 iterations before profiling.
 
 ### Pitfall 2: Accumulating Tensors in Lists
-**Problem**: `results.append(tensor)` keeps entire computation graph!
+**Problem**: `[file](tensor)` keeps entire computation graph!
 
-**Solution**: Detach or convert to Python: `results.append(tensor.detach().cpu())`.
+**Solution**: Detach or convert to Python: `[file]([file]().cpu())`.
 
-### Pitfall 3: Not Using `torch.no_grad()` for Inference
+### Pitfall 3: Not Using `[file]_grad()` for Inference
 **Problem**: Building computation graph during inference → Wasted memory.
 
-**Solution**: Always wrap inference with `torch.no_grad()` or `model.eval()`.
+**Solution**: Always wrap inference with `[file]_grad()` or `[file]()`.
 
-### Pitfall 4: Forgetting `optimizer.zero_grad()`
+### Pitfall 4: Forgetting `[file]_grad()`
 **Problem**: Gradients accumulate indefinitely → Memory leak!
 
-**Solution**: Call `optimizer.zero_grad()` at start of each iteration.
+**Solution**: Call `[file]_grad()` at start of each iteration.
 
 ### Pitfall 5: Profiling with Too Few Iterations
 **Problem**: High variance in timing measurements.
@@ -649,24 +649,24 @@ python3 train_deepseek_coder.py
 
 ## Next Steps
 
-**Compiler optimizations** → [Chapter 14: torch.compile and Triton](../ch14/README.md)
+**Compiler optimizations** → [Chapter 14: [file] and Triton](.[executable]/[file])
 
 Learn about:
-- torch.compile for automatic optimization
+- [file] for automatic optimization
 - Writing custom Triton kernels
 - TMA in Triton (when it works!)
 - Compiler modes and trade-offs
 
-**Back to CUDA** → [Chapter 10: Tensor Cores](../ch10/README.md)
+**Back to CUDA** → [Chapter 10: Tensor Cores](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **PyTorch Profiler**: [Official Tutorial](https://pytorch.org/tutorials/recipes/recipes/profiler_recipe.html)
-- **FSDP Documentation**: [Fully Sharded Data Parallel](https://pytorch.org/docs/stable/fsdp.html)
-- **Mixed Precision**: [Automatic Mixed Precision](https://pytorch.org/docs/stable/amp.html)
-- **Compiled Autograd**: [PyTorch 2.0 Features](https://pytorch.org/get-started/pytorch-2.0/)
+- **PyTorch Profiler**: [Official Tutorial](https://[file]/tutorials/recipes/recipes/[file])
+- **FSDP Documentation**: [Fully Sharded Data Parallel](https://[file]/docs/stable/[file])
+- **Mixed Precision**: [Automatic Mixed Precision](https://[file]/docs/stable/[file])
+- **Compiled Autograd**: [PyTorch [file] Features](https://[file]/get-started/pytorch-[file]/)
 
 ---
 

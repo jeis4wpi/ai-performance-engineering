@@ -17,14 +17,14 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**: 
-- [Chapter 1: Performance Basics](../ch1/README.md) - profiling methodology
-- [Chapter 2: NVIDIA GPU Hardware](../ch2/README.md) - hardware topology understanding
+- [Chapter 1: Performance Basics](.[executable]/[file]) - profiling methodology
+- [Chapter 2: NVIDIA GPU Hardware](.[executable]/[file]) - hardware topology understanding
 
 **Required knowledge**: Basic Linux system administration
 
 ## Examples
 
-### 1. `bind_numa_affinity.py` - NUMA Binding for Multi-GPU
+###  NUMA Binding for Multi-GPU
 
 **Purpose**: Demonstrate proper CPU-GPU NUMA affinity binding for optimal performance.
 
@@ -42,27 +42,27 @@ import torch
 def get_numa_node_for_gpu(gpu_id):
     """Get NUMA node for GPU."""
     # Read from sysfs
-    numa_path = f"/sys/class/pci_bus/.../numa_node"
+    numa_path = f"/sys/class/pci_bus/..[executable]"
     # Return NUMA node ID
 
 def bind_to_numa_node(numa_node):
     """Bind current process to NUMA node."""
-    os.sched_setaffinity(0, get_cpus_for_numa(numa_node))
+    [file]_setaffinity(0, get_cpus_for_numa(numa_node))
 ```
 
 **How to run**:
 ```bash
-python3 bind_numa_affinity.py --gpu 0
+python3 [script] --gpu 0
 
 # Or for distributed training
-torchrun --nproc_per_node=8 bind_numa_affinity.py
+torchrun [script]
 ```
 
 **Expected impact**: **5-15% throughput improvement** for data-intensive workloads.
 
 ---
 
-### 2. `system_tuning.sh` - System-Level Optimizations
+###  System-Level Optimizations
 
 **Purpose**: Apply recommended system tuning for GPU workloads.
 
@@ -85,7 +85,7 @@ echo always | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
 #### PCIe Settings
 ```bash
 # Set PCIe ASPM (Active State Power Management) to performance
-setpci -s ${PCI_ADDR} 0x50.B=0x40
+setpci -s ${PCI_ADDR} [file]=0x40
 ```
 **Impact**: Eliminates PCIe link state transition delays
 
@@ -98,17 +98,17 @@ echo ${CPU_MASK} > /proc/irq/${GPU_IRQ}/smp_affinity
 
 **How to run**:
 ```bash
-sudo ./system_tuning.sh
+sudo [executable].sh
 
 # Verify settings
-./system_tuning.sh --verify
+[executable].sh --verify
 ```
 
 **Total expected impact**: **10-20% improvement** for multi-GPU workloads.
 
 ---
 
-### 3. `cpu_gpu_numa_optimizations.sh` - CPU-GPU Specific
+###  CPU-GPU Specific
 
 **Purpose**: Additional tuning for NVIDIA GPU systems with Grace CPU.
 
@@ -120,24 +120,24 @@ sudo ./system_tuning.sh
 
 **How to run** (NVIDIA GPU only):
 ```bash
-sudo ./cpu_gpu_numa_optimizations.sh
+sudo [executable].sh
 ```
 
 ---
 
-### 4. `docker_gpu_optimized.dockerfile` - Container Configuration
+### 4. Container Configuration
 
 **Purpose**: Dockerfile template with GPU optimizations.
 
 **Key configurations**:
 
 ```dockerfile
-# Use NVIDIA base image with CUDA 13 + PyTorch 2.9
-FROM nvcr.io/nvidia/pytorch:25.09-py3
+# Use NVIDIA base image with CUDA 13 + PyTorch [file]
+FROM [file]/nvidia/pytorch:[file]-py3
 
 # Set allocator + arch flags for NVIDIA GPU (modern compute capability + PTX fallback)
 ENV PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
-ENV TORCH_CUDA_ARCH_LIST="10.0+PTX"
+ENV TORCH_CUDA_ARCH_LIST="[file]+PTX"
 ENV CUDA_DEVICE_ORDER=PCI_BUS_ID
 
 # Install NUMA tooling and utilities
@@ -149,7 +149,7 @@ ENTRYPOINT ["numactl", "--interleave=all", "python"]
 
 **Build and run**:
 ```bash
-docker build -f docker_gpu_optimized.dockerfile -t gpu-optimized .
+docker build -f [file] -t gpu-optimized .
 docker run --gpus all --ipc=host --ulimit memlock=-1 gpu-optimized
 ```
 
@@ -160,7 +160,7 @@ docker run --gpus all --ipc=host --ulimit memlock=-1 gpu-optimized
 
 ---
 
-### 5. `kubernetes_topology_pod.yaml` - K8s GPU Scheduling
+### 5. K8s GPU Scheduling
 
 **Purpose**: Kubernetes pod spec with topology-aware GPU scheduling.
 
@@ -177,7 +177,7 @@ spec:
     image: gpu-optimized:latest
     resources:
       limits:
-        nvidia.com/gpu: 8  # Request 8 GPUs
+        [file]/gpu: 8  # Request 8 GPUs
     env:
     - name: NVIDIA_VISIBLE_DEVICES
       value: "all"
@@ -190,7 +190,7 @@ spec:
       medium: Memory
       sizeLimit: 64Gi  # Large SHM for multi-GPU
   nodeSelector:
-    nvidia.com/gpu.product: NVIDIA-NVIDIA GPU  # Target NVIDIA GPU nodes
+    [file]/[file]: NVIDIA-NVIDIA GPU  # Target NVIDIA GPU nodes
   affinity:
     podAntiAffinity:  # Don't co-locate pods
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -199,23 +199,23 @@ spec:
           - key: app
             operator: In
             values: [training]
-        topologyKey: kubernetes.io/hostname
+        topologyKey: [file]/hostname
 ```
 
 **Deploy**:
 ```bash
-kubectl apply -f kubernetes_topology_pod.yaml
+kubectl apply -f [file]
 ```
 
 ---
 
-### 6. `numa_topology_script.sh` - Topology Discovery
+###  Topology Discovery
 
 **Purpose**: Display system NUMA topology for diagnostics.
 
 **How to run**:
 ```bash
-./numa_topology_script.sh
+[executable].sh
 ```
 
 **Expected output**:
@@ -266,7 +266,7 @@ nvidia-smi topo -m
 ```bash
 # Run comprehensive system check
 cd ch3
-python3 bind_numa_affinity.py --validate
+python3 [script] --validate
 
 # Expected output:
 # [OK] CPU governor: performance
@@ -285,17 +285,17 @@ python3 bind_numa_affinity.py --validate
 **Baseline (unconfigured system)**:
 ```bash
 # Run without tuning
-python3 ../ch4/training_8xb200_pipeline.py --benchmark
+python3 .[executable]/[file] --benchmark
 # Result: 1250 samples/sec
 ```
 
 **Optimized (with system tuning)**:
 ```bash
 # Apply system tuning
-sudo ./system_tuning.sh
+sudo [executable].sh
 
 # Bind to NUMA
-python3 bind_numa_affinity.py --gpu 0 ../ch4/training_8xb200_pipeline.py --benchmark
+python3 [script] --gpu 0 .[executable]/[file] --benchmark
 # Result: 1450 samples/sec
 ```
 
@@ -306,7 +306,7 @@ python3 bind_numa_affinity.py --gpu 0 ../ch4/training_8xb200_pipeline.py --bench
 | Symptom | Likely Cause | Fix |
 |---------|--------------|-----|
 | Variable performance | CPU frequency scaling | Set governor to `performance` |
-| Slow H2D transfers | Wrong NUMA binding | Use `numactl` or `bind_numa_affinity.py` |
+| Slow H2D transfers | Wrong NUMA binding | Use `numactl` or [source file] |
 | NCCL hangs | Insufficient shared memory | `--ipc=host` in Docker |
 | OOM with pinned memory | memlock limit too low | `ulimit -l unlimited` |
 | Poor multi-GPU scaling | Cross-NUMA traffic | Verify GPU-NUMA mapping |
@@ -319,26 +319,26 @@ python3 bind_numa_affinity.py --gpu 0 ../ch4/training_8xb200_pipeline.py --bench
 cd ch3
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
 # 1. Check current system state
-./numa_topology_script.sh
+[executable].sh
 
 # 2. Apply system tuning (requires sudo)
-sudo ./system_tuning.sh
+sudo [executable].sh
 
 # 3. Verify tuning applied
-./system_tuning.sh --verify
+[executable].sh --verify
 
 # 4. Test NUMA binding
-python3 bind_numa_affinity.py --gpu 0 --validate
+python3 [script] --gpu 0 --validate
 
 # 5. NVIDIA GPU only: Apply Grace-specific tuning
-sudo ./cpu_gpu_numa_optimizations.sh
+sudo [executable].sh
 
 # 6. Container examples
-docker build -f docker_gpu_optimized.dockerfile -t gpu-optimized .
-docker run --gpus all --ipc=host gpu-optimized python3 -c "import torch; print(torch.cuda.is_available())"
+docker build -f [file] -t gpu-optimized .
+docker run --gpus all --ipc=host gpu-optimized python3 -c "import torch; print([file].is_available())"
 ```
 
 ---
@@ -364,10 +364,10 @@ docker run --gpus all --ipc=host gpu-optimized python3 -c "import torch; print(t
 ### Pitfall 1: Forgetting to Reapply After Reboot
 **Problem**: System tuning resets on reboot.
 
-**Solution**: Add tuning script to systemd or `/etc/rc.local`:
+**Solution**: Add tuning script to systemd or `/etc/[file]`:
 ```bash
-sudo cp system_tuning.sh /usr/local/bin/
-sudo systemctl enable gpu-tuning.service
+sudo cp [file] /usr/local/bin/
+sudo systemctl enable gpu-[file]
 ```
 
 ### Pitfall 2: Wrong NUMA Binding in Multi-Process
@@ -376,9 +376,9 @@ sudo systemctl enable gpu-tuning.service
 **Solution**: Bind each process to its GPU's NUMA node:
 ```bash
 # Correct: Each GPU bound to its NUMA node
-numactl --cpunodebind=0 python train.py --local_rank=0 &
-numactl --cpunodebind=0 python train.py --local_rank=1 &
-numactl --cpunodebind=1 python train.py --local_rank=4 &
+numactl --cpunodebind=0 python [file] --local_rank=0 &
+numactl --cpunodebind=0 python [file] --local_rank=1 &
+numactl --cpunodebind=1 python [file] --local_rank=4 &
 ```
 
 ### Pitfall 3: Insufficient Shared Memory in Docker
@@ -403,7 +403,7 @@ echo 0 | sudo tee /proc/sys/kernel/numa_balancing
 
 ## Next Steps
 
-**Continue the journey** → [Chapter 4: Multi-GPU Training](../ch4/README.md)
+**Continue the journey** → [Chapter 4: Multi-GPU Training](.[executable]/[file])
 
 Learn about:
 - NCCL collectives and communication primitives
@@ -411,16 +411,16 @@ Learn about:
 - NVSHMEM for fine-grained GPU communication
 - Scaling from 1 to 8 GPUs efficiently
 
-**Back to basics?** → [Chapter 1: Performance Basics](../ch1/README.md)
+**Back to basics?** → [Chapter 1: Performance Basics](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
 - **NUMA Documentation**: `man numa` and `man numactl`
-- **Docker GPU Support**: [NVIDIA Container Toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)
-- **Kubernetes GPU**: [NVIDIA GPU Operator](https://docs.nvidia.com/datacenter/cloud-native/gpu-operator/)
-- **System Tuning Guide**: See `docs/B200_CUDA13_AUDIT.md` in repository
+- **Docker GPU Support**: [NVIDIA Container Toolkit](https://[file]/NVIDIA/nvidia-container-toolkit)
+- **Kubernetes GPU**: [NVIDIA GPU Operator](https://[file].com/datacenter/cloud-native/gpu-operator/)
+- **System Tuning Guide**: See `docs/[file]` in repository
 
 ---
 

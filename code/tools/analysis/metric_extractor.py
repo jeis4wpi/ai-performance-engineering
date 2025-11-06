@@ -281,7 +281,7 @@ def extract_from_ncu_report(ncu_rep: Path) -> Dict[str, float]:
             ["ncu", "--csv", "--page", "details", "--import", str(ncu_rep)],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=60  # 60 second timeout - extraction can be slow for large files
         )
         
         if result.returncode == 0:
@@ -348,7 +348,7 @@ def extract_from_nsys_report(nsys_rep: Path) -> Dict[str, float]:
             ["nsys", "stats", "--report", "cuda_gpu_sum", "--format", "csv", str(nsys_rep)],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=60  # 60 second timeout - extraction can be slow for large files
         )
         
         if result.returncode == 0:

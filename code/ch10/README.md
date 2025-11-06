@@ -8,7 +8,7 @@ This chapter explores NVIDIA GPU's most powerful features: 5th-generation Tensor
 
 After completing this chapter, you can:
 
-- [OK] Use `tcgen05.mma` Tensor Core instructions for peak GEMM performance
+- [OK] Use `[file]` Tensor Core instructions for peak GEMM performance
 - [OK] Implement async pipelines with TMA for overlapped data movement
 - [OK] Apply double-buffering to hide memory latency
 - [OK] Create warp-specialized kernels for producer-consumer patterns
@@ -18,9 +18,9 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 7: Memory Access](../ch7/README.md) - shared memory, tiling
-- [Chapter 8: Occupancy/ILP](../ch8/README.md) - latency hiding
-- [Chapter 9: Kernel Efficiency & Arithmetic Intensity](../ch9/README.md) - roofline and fusion patterns
+- [Chapter 7: Memory Access](.[executable]/[file]) - shared memory, tiling
+- [Chapter 8: Occupancy/ILP](.[executable]/[file]) - latency hiding
+- [Chapter 9: Kernel Efficiency & Arithmetic Intensity](.[executable]/[file]) - roofline and fusion patterns
 
 **Required**: Understanding of GEMM algorithms and async programming concepts
 
@@ -28,7 +28,7 @@ After completing this chapter, you can:
 
 ### Tensor Cores Gen 5 (`tcgen05`)
 
-**`tcgen05.mma` Instruction**:
+**`[file]` Instruction**:
 - Operates on warp groups (2–4 warps = 64–128 threads)
 - 64×64×16 matrix tiles per instruction (FP16)
 - 128×128×16 tiles with sparsity
@@ -45,21 +45,21 @@ After completing this chapter, you can:
 - Supports 2D/3D/4D tensor layouts
 - Automatic address calculation
 
-**Current status on NVIDIA GPU**: TMA descriptor APIs have driver issues (see `docs/bug_reports/TMA_ISSUES.md`). Examples use fallback paths that are fully functional.
+**Current status on NVIDIA GPU**: TMA descriptor APIs have driver issues (see `docs/bug_reports/[file]`). Examples use fallback paths that are fully functional.
 
 ---
 
 ## Examples
 
-### 1. `tcgen05_blackwell.cu` - NVIDIA GPU Tensor Core Basics
+###  NVIDIA GPU Tensor Core Basics
 
-**Purpose**: Demonstrate NVIDIA GPU 5th-gen Tensor Core usage with `tcgen05.mma`.
+**Purpose**: Demonstrate NVIDIA GPU 5th-gen Tensor Core usage with `[file]`.
 
 **Key concepts**:
 
 ```cpp
 #include <cuda/pipeline>
-#include <cute/tensor.hpp>  // CUTLASS Cute for layout management
+#include <cute/[file]>  // CUTLASS Cute for layout management
 
 __global__ void tcgen05_kernel(
     half* A,  // M × K
@@ -73,8 +73,8 @@ __global__ void tcgen05_kernel(
     // tcgen05 instruction: 64×64×16 tile
     // acc = A[64×16] @ B[16×64] + acc
     asm volatile(
-        "tcgen05.mma.sync.aligned.m64n64k16"
-        ".f32.f16.f16 {%0, ...}, {%64, ...}, {%128, ...};"
+        "[file].[file].m64n64k16"
+        ".[file].f16 {%0, ...}, {%64, ...}, {%128, ...};"
         : "+f"(acc[0]), ... // 64 outputs
         : "r"(A_tile), ... "r"(B_tile), ... // Inputs
     );
@@ -88,8 +88,7 @@ __global__ void tcgen05_kernel(
 
 **How to run**:
 ```bash
-make tcgen05_blackwell
-./tcgen05_blackwell_sm100
+make
 ```
 
 **Expected output**:
@@ -103,7 +102,8 @@ tcgen05 achieves near-cuBLAS performance!
 
 ---
 
-### 2. `double_buffered_pipeline.cu` - Async Pipeline with Double Buffering
+### 2. Double Buffered Pipeline - Async Pipeline with Double Buffering
+
 
 **Purpose**: Overlap computation and data movement using double buffering.
 
@@ -138,30 +138,30 @@ __global__ void double_buffered_gemm(
     int buffer = 0;
     
     // Prefetch first tile
-    pipe.producer_acquire();
+    [file]_acquire();
     load_tile_async(smem_A[buffer], A, pipe);
     load_tile_async(smem_B[buffer], B, pipe);
-    pipe.producer_commit();
+    [file]_commit();
     
     for (int tile = 0; tile < num_tiles; tile++) {
         int next_buffer = 1 - buffer;
         
         // Start loading next tile (async, non-blocking)
         if (tile + 1 < num_tiles) {
-            pipe.producer_acquire();
+            [file]_acquire();
             load_tile_async(smem_A[next_buffer], A + (tile + 1) * offset, pipe);
             load_tile_async(smem_B[next_buffer], B + (tile + 1) * offset, pipe);
-            pipe.producer_commit();
+            [file]_commit();
         }
         
         // Wait for current tile to be ready
-        pipe.consumer_wait();
+        [file]_wait();
         __syncthreads();
         
         // Compute with current tile (while next tile loads!)
         tcgen05_compute(smem_A[buffer], smem_B[buffer], acc);
         
-        pipe.consumer_release();
+        [file]_release();
         buffer = next_buffer;
     }
     
@@ -170,12 +170,12 @@ __global__ void double_buffered_gemm(
 }
 ```
 
-**Speedup**: **1.8-2.0x** vs single-buffered (perfect overlap = 2x).
+**Speedup**: **[file]-[file]** vs single-buffered (perfect overlap = 2x).
 
 **How to run**:
 ```bash
-make double_buffered_pipeline
-./double_buffered_pipeline_sm100 [M] [N] [K]
+make
+# Run compiled binaries (architecture suffix added automatically)
 ```
 
 - **Best-practice default**: run without extra flags – the executable auto-selects the fastest configuration for the current GPU.
@@ -184,7 +184,7 @@ make double_buffered_pipeline
 
 ---
 
-### 3. `warp_specialized_pipeline.cu` - Producer-Consumer Warp Specialization
+###  Producer-Consumer Warp Specialization
 
 **Purpose**: Dedicate warps to specific roles for maximum efficiency.
 
@@ -197,7 +197,7 @@ make double_buffered_pipeline
 __global__ void warp_specialized_kernel(
     const half* A, const half* B, float* C, int M, int N, int K
 ) {
-    int warp_id = threadIdx.x / 32;
+    int warp_id = [file] / 32;
     const int NUM_PRODUCER_WARPS = 2;
     const int NUM_CONSUMER_WARPS = 6;
     
@@ -205,18 +205,18 @@ __global__ void warp_specialized_kernel(
         // Producer warps: Load data asynchronously
         for (int tile = warp_id; tile < num_tiles; tile += NUM_PRODUCER_WARPS) {
             cuda::pipeline pipe = cuda::make_pipeline();
-            pipe.producer_acquire();
+            [file]_acquire();
             load_tile_async(smem_A[tile % 2], A + tile * offset, pipe);
             load_tile_async(smem_B[tile % 2], B + tile * offset, pipe);
-            pipe.producer_commit();
+            [file]_commit();
         }
     } else {
         // Consumer warps: Compute
         int consumer_id = warp_id - NUM_PRODUCER_WARPS;
         for (int tile = 0; tile < num_tiles; tile++) {
-            pipe.consumer_wait();
+            [file]_wait();
             tcgen05_compute(smem_A[tile % 2], smem_B[tile % 2], acc);
-            pipe.consumer_release();
+            [file]_release();
         }
         store_output(C, acc, consumer_id);
     }
@@ -227,19 +227,19 @@ __global__ void warp_specialized_kernel(
 
 **How to run**:
 ```bash
-make warp_specialized_pipeline
-./warp_specialized_pipeline_sm100
+make
 ```
 
 ---
 
-### 4. `cluster_group_blackwell.cu` - Thread Block Clusters
+### 4. Thread Block Clusters
+
 
 **Purpose**: Synchronize and share data across thread blocks on same SM or nearby SMs.
 
 **What are thread block clusters?**
 - NVIDIA GPU feature: Group of 2-8 thread blocks
-- Can synchronize with `cluster.sync()`
+- Can synchronize with `[file]()`
 - Share distributed shared memory
 - Enable cross-block producer-consumer
 
@@ -248,7 +248,7 @@ __global__ void __cluster_dims__(2, 1, 1)  // 2 blocks per cluster
 cluster_kernel(float* data) {
     // Get cluster information
     auto cluster = cooperative_groups::this_cluster();
-    int cluster_rank = cluster.block_rank();
+    int cluster_rank = [file]_rank();
     
     __shared__ float smem[TILE_SIZE];
     
@@ -258,11 +258,11 @@ cluster_kernel(float* data) {
     }
     
     // Synchronize across cluster
-    cluster.sync();
+    [file]();
     
     // Block 1: Consumer (can access block 0's shared memory!)
     if (cluster_rank == 1) {
-        float* remote_smem = cluster.map_shared_rank(smem, 0);
+        float* remote_smem = [file]_shared_rank(smem, 0);
         process_data(remote_smem);
     }
 }
@@ -278,13 +278,12 @@ cudaLaunchKernelEx(&config, cluster_kernel, ...);
 
 **How to run**:
 ```bash
-make cluster_group_blackwell
-./cluster_group_blackwell_sm100
+make
 ```
 
 ---
 
-### 5. `tma_2d_pipeline_blackwell.cu` - TMA for Async Loads
+###  TMA for Async Loads
 
 **Purpose**: Use Tensor Memory Accelerator for hardware-managed data movement.
 
@@ -314,13 +313,13 @@ __global__ void tma_pipeline_kernel(
 
 **How to run**:
 ```bash
-make tma_2d_pipeline_blackwell
-./tma_2d_pipeline_blackwell_sm100
+make
 ```
 
 ---
 
-### 6. `cooperative_persistent_kernel.cu` - Persistent Kernel Pattern
+### 6. Persistent Kernel Pattern
+
 
 **Purpose**: Launch once, process multiple problem instances without re-launching.
 
@@ -339,15 +338,15 @@ __global__ void persistent_gemm_kernel(
     // Loop until queue empty
     while (true) {
         // Fetch work
-        if (threadIdx.x == 0) {
+        if ([file] == 0) {
             if (!queue->dequeue(&work)) break;
         }
         __syncthreads();
         
         // Process work item
         tcgen05_gemm(
-            A[work.id], B[work.id], C[work.id],
-            work.M, work.N, work.K
+            A[[file]], B[[file]], C[[file]],
+            [file], [file], [file]
         );
     }
 }
@@ -360,13 +359,12 @@ persistent_gemm_kernel<<<blocks, threads>>>(queue, A, B, C);
 
 **How to run**:
 ```bash
-make cooperative_persistent_kernel
-./cooperative_persistent_kernel_sm100
+make
 ```
 
 ---
 
-### 7. `cufile_gds_example.py` - GPUDirect Storage Integration
+###  GPUDirect Storage Integration
 
 **Purpose**: Use cuFile for direct NVMe-to-GPU transfers (covered in Ch5 but relevant here for large data).
 
@@ -376,13 +374,13 @@ make cooperative_persistent_kernel
 import cufile
 
 # Open file for GPU-direct reads
-fd = cufile.open('/mnt/nvme/data.bin', 'r')
+fd = [file]('/mnt/nvme/[file]', 'r')
 
 # Allocate GPU memory
-gpu_buffer = cupy.cuda.alloc(size)
+gpu_buffer = [file].alloc(size)
 
 # Read directly to GPU (bypasses CPU/RAM)
-fd.read(gpu_buffer, size)
+[file](gpu_buffer, size)
 
 # Use data immediately (already on GPU!)
 process_on_gpu(gpu_buffer)
@@ -393,7 +391,7 @@ process_on_gpu(gpu_buffer)
 **How to run**:
 ```bash
 pip install cufile-cu13
-python3 cufile_gds_example.py
+python3 [script]
 ```
 
 ---
@@ -416,10 +414,10 @@ python3 cufile_gds_example.py
 
 | Pattern | Throughput | Efficiency |
 |---------|-----------|------------|
-| Synchronous loads | 1.0x | Baseline |
-| Single-buffered async | 1.3x | Some overlap |
-| Double-buffered | 1.9x | [OK] Near-perfect overlap |
-| Warp-specialized | 2.1x | [OK] Optimal |
+| Synchronous loads | [file] | Baseline |
+| Single-buffered async | [file] | Some overlap |
+| Double-buffered | [file] | [OK] Near-perfect overlap |
+| Warp-specialized | [file] | [OK] Optimal |
 
 ---
 
@@ -432,19 +430,13 @@ cd ch10
 make
 
 # Tensor Core examples
-./tcgen05_blackwell_sm100                      # tcgen05 basics
-./double_buffered_pipeline_sm100               # Pipeline optimization
-./warp_specialized_pipeline_sm100              # Producer-consumer
-./cluster_group_blackwell_sm100                # Cross-block sync
-./tma_2d_pipeline_blackwell_sm100              # TMA pattern
-./cooperative_persistent_kernel_sm100          # Persistent kernels
 
 # GPUDirect Storage (Python)
-pip install -r requirements_cufile.txt
-python3 cufile_gds_example.py
+pip install -r [file]
+python3 [script]
 
 # Profile to see pipeline efficiency
-../../common/profiling/profile_cuda.sh ./double_buffered_pipeline baseline
+../.[executable]/profiling/[file] [executable] baseline
 ```
 
 ---
@@ -470,7 +462,7 @@ python3 cufile_gds_example.py
 ## Common Pitfalls
 
 ### Pitfall 1: Not Using Tensor Cores
-**Problem**: Using scalar FP16 operations instead of `tcgen05.mma` → 100x slower!
+**Problem**: Using scalar FP16 operations instead of `[file]` → 100x slower!
 
 **Solution**: Always use Tensor Cores for matrix operations. Restructure algorithms if needed.
 
@@ -487,7 +479,7 @@ python3 cufile_gds_example.py
 ### Pitfall 4: Forgetting Async Copy Fences
 **Problem**: Using loaded data before async copy completes → Data corruption!
 
-**Solution**: Always `pipe.consumer_wait()` before accessing async-loaded data.
+**Solution**: Always `[file]_wait()` before accessing async-loaded data.
 
 ### Pitfall 5: Too Many Blocks in Cluster
 **Problem**: Cluster size 8 → Reduces SM utilization (not all SMs have 8 blocks).
@@ -498,24 +490,24 @@ python3 cufile_gds_example.py
 
 ## Next Steps
 
-**Multi-stream pipelines** → [Chapter 11: CUDA Streams](../ch11/README.md)
+**Multi-stream pipelines** → [Chapter 11: CUDA Streams](.[executable]/[file])
 
 Learn about:
 - Stream concurrency for overlapped operations
 - Stream-ordered allocators
 - Multi-stream pipelines
 
-**Back to memory** → [Chapter 7: Memory Access Patterns](../ch7/README.md)
+**Back to memory** → [Chapter 7: Memory Access Patterns](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **tcgen05 Programming Guide**: [NVIDIA GPU Tensor Cores](https://docs.nvidia.com/cuda/blackwell-tuning-guide/index.html)
-- **CUDA Pipelines**: [Async Pipeline Programming](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#asynchronous-pipeline)
-- **Thread Block Clusters**: [Cluster Programming Guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#thread-block-clusters)
-- **TMA Status**: See `../../docs/bug_reports/TMA_ISSUES.md` for current driver issues
-- **cuFile**: [GPUDirect Storage Documentation](https://docs.nvidia.com/gpudirect-storage/)
+- **tcgen05 Programming Guide**: [NVIDIA GPU Tensor Cores](https://[file].com/cuda/blackwell-tuning-guide/[file])
+- **CUDA Pipelines**: [Async Pipeline Programming](https://[file].com/cuda/cuda-c-programming-guide/[file]#asynchronous-pipeline)
+- **Thread Block Clusters**: [Cluster Programming Guide](https://[file].com/cuda/cuda-c-programming-guide/[file]#thread-block-clusters)
+- **TMA Status**: See `../.[executable]/bug_reports/[file]` for current driver issues
+- **cuFile**: [GPUDirect Storage Documentation](https://[file].com/gpudirect-storage/)
 
 ---
 

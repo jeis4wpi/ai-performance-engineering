@@ -10,7 +10,7 @@ BASE_TARGETS = $(CUDA_SOURCES:.cu=)
 
 TARGETS = $(addsuffix $(SUFFIX), $(BASE_TARGETS))
 
-.PHONY: all clean compare blackwell grace-blackwell profile-nsys profile-ncu profile-hta profile-perf profile-all $(TARGETS)
+.PHONY: all clean compare b200 gb10 b300 gb300 profile-nsys profile-ncu profile-hta profile-perf profile-all $(TARGETS)
 
 all: $(TARGETS)
 	@echo "Building Chapter 7 examples with $(ARCH) (CUDA $(CUDA_VERSION))"
@@ -31,11 +31,17 @@ compare: clean
 		$(MAKE) ARCH=$${arch} all; \
 	done
 
-blackwell: ARCH=sm_100
-blackwell: clean all
+b200: ARCH=sm_100
+b200: clean all
 
-grace-blackwell: ARCH=sm_121
-grace-blackwell: clean all
+gb10: ARCH=sm_121
+gb10: clean all
+
+b300: ARCH=sm_103
+b300: clean all
+
+gb300: ARCH=sm_103
+gb300: clean all
 
 profile-nsys: all
 	@echo "Nsight Systems timeline profiling..."

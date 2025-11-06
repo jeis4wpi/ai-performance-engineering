@@ -83,7 +83,7 @@ class CudaBinaryBenchmark(Benchmark):
         *,
         iterations: int = 3,
         warmup: int = 1,
-        timeout_seconds: int = 120,
+        timeout_seconds: int = 15,  # 15 second timeout to prevent hangs
         run_args: Sequence[str] = (),
         time_regex: Optional[str] = r"([0-9]+(?:\.[0-9]+)?)\s*ms",
     ) -> None:
@@ -108,13 +108,18 @@ class CudaBinaryBenchmark(Benchmark):
         target = f"{self.binary_name}{suffix}"
         build_cmd = ["make", f"ARCH={self.arch}", target]
         
-        completed = subprocess.run(
-            build_cmd,
-            cwd=self.chapter_dir,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            completed = subprocess.run(
+                build_cmd,
+                cwd=self.chapter_dir,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=60,  # 60 second timeout - CUDA compilation can take time for complex kernels
+            )
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(f"Build timeout: {target} compilation exceeded 60 seconds")
+        
         if completed.returncode != 0:
             raise RuntimeError(
                 f"Failed to build {target} (arch={self.arch}).\n"
@@ -132,13 +137,17 @@ class CudaBinaryBenchmark(Benchmark):
         if self.exec_path is None:
             raise RuntimeError("Executable path not set (build step missing)")
         
-        completed = subprocess.run(
-            [str(self.exec_path), *self.run_args],
-            cwd=self.chapter_dir,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            completed = subprocess.run(
+                [str(self.exec_path), *self.run_args],
+                cwd=self.chapter_dir,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds,  # Use configured timeout
+            )
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(f"Execution timeout: {self.exec_path.name} exceeded {self.timeout_seconds} seconds")
         
         if completed.returncode != 0:
             raise RuntimeError(

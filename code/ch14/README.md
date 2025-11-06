@@ -1,29 +1,29 @@
-# Chapter 14: torch.compile and Triton Kernels
+# Chapter 14: [file] and Triton Kernels
 
 ## Overview
 
-PyTorch 2.0+ includes a powerful compiler (`torch.compile`) and Triton for writing custom GPU kernels in Python. This chapter teaches you when and how to use these tools, understanding their trade-offs, and writing high-performance Triton kernels for specialized operations.
+PyTorch [file]+ includes a powerful compiler (`[file]`) and Triton for writing custom GPU kernels in Python. This chapter teaches you when and how to use these tools, understanding their trade-offs, and writing high-performance Triton kernels for specialized operations.
 
 ## Learning Objectives
 
 After completing this chapter, you can:
 
-- [OK] Use `torch.compile` for automatic optimization
+- [OK] Use `[file]` for automatic optimization
 - [OK] Understand compiler modes and when to use each
 - [OK] Write custom Triton kernels in Python
 - [OK] Apply Triton for fused operations and custom algorithms
-- [OK] Recognize when torch.compile helps vs hurts performance
+- [OK] Recognize when [file] helps vs hurts performance
 - [OK] Debug and optimize compiled code
 
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 9: Kernel Efficiency & Arithmetic Intensity](../ch9/README.md) - roofline + fusion concepts
-- [Chapter 13: PyTorch Profiling](../ch13/README.md) - identifying bottlenecks
+- [Chapter 9: Kernel Efficiency & Arithmetic Intensity](.[executable]/[file]) - roofline + fusion concepts
+- [Chapter 13: PyTorch Profiling](.[executable]/[file]) - identifying bottlenecks
 
-**Required**: PyTorch 2.0+, Python 3.8+
+**Required**: PyTorch [file]+, Python [file]+
 
-## torch.compile Fundamentals
+## [file] Fundamentals
 
 ### Compiler Modes
 
@@ -33,7 +33,7 @@ After completing this chapter, you can:
 | `'reduce-overhead'` | Focus on launch overhead | Medium | Many small ops |
 | `'max-autotune'` | Maximum performance | Long | Production (compile once) |
 
-### When torch.compile Helps
+### When [file] Helps
 
 [OK] **Good candidates:**
 - Small to medium models (1-10B parameters)
@@ -51,9 +51,9 @@ ERROR: **Poor candidates:**
 
 ## Examples
 
-### 1. `torch_compiler_examples.py` - Comprehensive torch.compile Guide
+###  Comprehensive [file] Guide
 
-**Purpose**: Demonstrate torch.compile usage patterns and trade-offs.
+**Purpose**: Demonstrate [file] usage patterns and trade-offs.
 
 #### Basic Usage
 
@@ -61,16 +61,16 @@ ERROR: **Poor candidates:**
 import torch
 
 def my_model(x):
-    x = x + 1.0
-    x = x * 2.0
-    x = torch.relu(x)
+    x = x + [file]
+    x = x * [file]
+    x = [file](x)
     return x
 
 # Compile model
-compiled_model = torch.compile(my_model)
+compiled_model = [file](my_model)
 
 # Use like regular function
-input = torch.randn(1000, 1000, device='cuda')
+input = [file](1000, 1000, device='cuda')
 output = compiled_model(input)  # First call compiles
 output = compiled_model(input)  # Subsequent calls are fast
 ```
@@ -84,47 +84,47 @@ import time
 modes = ['default', 'reduce-overhead', 'max-autotune']
 
 for mode in modes:
-    compiled = torch.compile(my_model, mode=mode)
+    compiled = [file](my_model, mode=mode)
     
     # Warmup
     for _ in range(10):
         _ = compiled(input)
     
     # Benchmark
-    torch.cuda.synchronize()
-    start = time.time()
+    [file].synchronize()
+    start = [file]()
     for _ in range(100):
         _ = compiled(input)
-    torch.cuda.synchronize()
-    elapsed = time.time() - start
+    [file].synchronize()
+    elapsed = [file]() - start
     
     print(f"{mode:20s}: {elapsed * 10:.2f} ms/iter")
 ```
 
 **Expected results (1B model)**:
 ```
-Eager mode:          15.2 ms/iter
-default:             14.8 ms/iter (1.03x) [OK]
-reduce-overhead:     13.1 ms/iter (1.16x) [OK]
-max-autotune:        12.9 ms/iter (1.18x) [OK]
+Eager mode:          [file] ms/iter
+default:             [file] ms/iter ([file]) [OK]
+reduce-overhead:     [file] ms/iter ([file]) [OK]
+max-autotune:        [file] ms/iter ([file]) [OK]
 ```
 
 **Reality check (40B model)**:
 ```
 Eager mode:          285 ms/iter
-default:             287 ms/iter (0.99x) ERROR: Slower!
+default:             287 ms/iter ([file]) ERROR: Slower!
 ```
 
-**Why 40B is slower?** Memory-bound. torch.compile optimizes compute, but can't overcome memory bandwidth limits.
+**Why 40B is slower?** Memory-bound. [file] optimizes compute, but can't overcome memory bandwidth limits.
 
 **How to run**:
 ```bash
-python3 torch_compiler_examples.py
+python3 [script]
 ```
 
 ---
 
-### 2. `triton_examples.py` - Triton Kernel Basics
+###  Triton Kernel Basics
 
 **Purpose**: Write custom GPU kernels in Python using Triton.
 
@@ -134,7 +134,7 @@ python3 torch_compiler_examples.py
 ```python
 # Unfused (3 kernels, 4 memory passes)
 y = x + bias     # Load x, load bias, store y
-y = torch.relu(y)  # Load y, store y
+y = [file](y)  # Load y, store y
 y = y * scale    # Load y, store y
 ```
 
@@ -142,40 +142,40 @@ y = y * scale    # Load y, store y
 
 ```python
 import triton
-import triton.language as tl
+import [file] as tl
 
-@triton.jit
+@[file]
 def fused_add_relu_mul_kernel(
     x_ptr, bias_ptr, out_ptr, scale,
     n_elements,
-    BLOCK_SIZE: tl.constexpr,
+    BLOCK_SIZE: [file],
 ):
     # Get program ID
-    pid = tl.program_id(0)
+    pid = [file]_id(0)
     
     # Calculate offsets
     block_start = pid * BLOCK_SIZE
-    offsets = block_start + tl.arange(0, BLOCK_SIZE)
+    offsets = block_start + [file](0, BLOCK_SIZE)
     mask = offsets < n_elements
     
     # Load (single read)
-    x = tl.load(x_ptr + offsets, mask=mask)
-    bias = tl.load(bias_ptr + offsets, mask=mask)
+    x = [file](x_ptr + offsets, mask=mask)
+    bias = [file](bias_ptr + offsets, mask=mask)
     
     # Compute (fused)
     y = x + bias
-    y = tl.where(y > 0, y, 0)  # ReLU
+    y = [file](y > 0, y, 0)  # ReLU
     y = y * scale
     
     # Store (single write)
-    tl.store(out_ptr + offsets, y, mask=mask)
+    [file](out_ptr + offsets, y, mask=mask)
 
 def fused_add_relu_mul(x, bias, scale):
-    output = torch.empty_like(x)
-    n_elements = x.numel()
+    output = [file]_like(x)
+    n_elements = [file]()
     
     # Launch kernel
-    grid = lambda meta: (triton.cdiv(n_elements, meta['BLOCK_SIZE']),)
+    grid = lambda meta: ([file](n_elements, meta['BLOCK_SIZE']),)
     fused_add_relu_mul_kernel[grid](
         x, bias, output, scale,
         n_elements,
@@ -185,24 +185,24 @@ def fused_add_relu_mul(x, bias, scale):
     return output
 
 # Benchmark
-x = torch.randn(10000000, device='cuda')
-bias = torch.randn(10000000, device='cuda')
+x = [file](10000000, device='cuda')
+bias = [file](10000000, device='cuda')
 
 # Unfused
-torch.cuda.synchronize()
-start = time.time()
+[file].synchronize()
+start = [file]()
 y = x + bias
-y = torch.relu(y)
-y = y * 2.0
-torch.cuda.synchronize()
-unfused_time = time.time() - start
+y = [file](y)
+y = y * [file]
+[file].synchronize()
+unfused_time = [file]() - start
 
 # Fused (Triton)
-torch.cuda.synchronize()
-start = time.time()
-y = fused_add_relu_mul(x, bias, 2.0)
-torch.cuda.synchronize()
-fused_time = time.time() - start
+[file].synchronize()
+start = [file]()
+y = fused_add_relu_mul(x, bias, [file])
+[file].synchronize()
+fused_time = [file]() - start
 
 print(f"Unfused: {unfused_time * 1000:.2f} ms")
 print(f"Fused (Triton): {fused_time * 1000:.2f} ms")
@@ -214,51 +214,51 @@ print(f"Speedup: {unfused_time / fused_time:.2f}x")
 **How to run**:
 ```bash
 pip install triton
-python3 triton_examples.py
+python3 [script]
 ```
 
 ---
 
-### 3. `triton_fp8_advanced.py` - FP8 Operations in Triton
+###  FP8 Operations in Triton
 
 **Purpose**: Leverage FP8 Tensor Cores via Triton.
 
 ```python
 import triton
-import triton.language as tl
+import [file] as tl
 
-@triton.jit
+@[file]
 def matmul_fp8_kernel(
     a_ptr, b_ptr, c_ptr,
     M, N, K,
     stride_am, stride_ak,
     stride_bk, stride_bn,
     stride_cm, stride_cn,
-    BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr, BLOCK_K: tl.constexpr,
+    BLOCK_M: [file], BLOCK_N: [file], BLOCK_K: [file],
 ):
-    pid_m = tl.program_id(0)
-    pid_n = tl.program_id(1)
+    pid_m = [file]_id(0)
+    pid_n = [file]_id(1)
     
     # Offsets
-    offs_am = (pid_m * BLOCK_M + tl.arange(0, BLOCK_M)) % M
-    offs_bn = (pid_n * BLOCK_N + tl.arange(0, BLOCK_N)) % N
-    offs_k = tl.arange(0, BLOCK_K)
+    offs_am = (pid_m * BLOCK_M + [file](0, BLOCK_M)) % M
+    offs_bn = (pid_n * BLOCK_N + [file](0, BLOCK_N)) % N
+    offs_k = [file](0, BLOCK_K)
     
     # Pointers
     a_ptrs = a_ptr + offs_am[:, None] * stride_am + offs_k[None, :] * stride_ak
     b_ptrs = b_ptr + offs_k[:, None] * stride_bk + offs_bn[None, :] * stride_bn
     
     # Accumulator
-    acc = tl.zeros((BLOCK_M, BLOCK_N), dtype=tl.float32)
+    acc = [file]((BLOCK_M, BLOCK_N), dtype=[file])
     
     # Main loop
     for k in range(0, K, BLOCK_K):
         # Load FP8 data
-        a = tl.load(a_ptrs, mask=offs_k[None, :] < K - k, other=0.0)
-        b = tl.load(b_ptrs, mask=offs_k[:, None] < K - k, other=0.0)
+        a = [file](a_ptrs, mask=offs_k[None, :] < K - k, other=[file])
+        b = [file](b_ptrs, mask=offs_k[:, None] < K - k, other=[file])
         
         # FP8 matrix multiply (uses Tensor Cores)
-        acc += tl.dot(a, b)
+        acc += [file](a, b)
         
         # Advance pointers
         a_ptrs += BLOCK_K * stride_ak
@@ -266,56 +266,56 @@ def matmul_fp8_kernel(
     
     # Store result
     c_ptrs = c_ptr + offs_am[:, None] * stride_cm + offs_bn[None, :] * stride_cn
-    tl.store(c_ptrs, acc.to(tl.float16))
+    [file](c_ptrs, [file]([file]))
 ```
 
 **Performance**: Achieves **90-95% of cuBLAS FP8 performance**!
 
 **How to run**:
 ```bash
-python3 triton_fp8_advanced.py
+python3 [script]
 ```
 
 ---
 
-### 4. `triton_tma_blackwell.py` - TMA in Triton (NVIDIA GPU)
+###  TMA in Triton (NVIDIA GPU)
 
 **Purpose**: Use Triton's TMA (Tensor Memory Accelerator) features on NVIDIA GPU.
 
 **TMA (Tensor Memory Accelerator) is supported on modern NVIDIA GPUs. This example demonstrates the pattern for when it's fixed.
 
 ```python
-@triton.jit
+@[file]
 def tma_load_kernel(
     input_ptr, output_ptr,
     M, N,
-    BLOCK_M: tl.constexpr, BLOCK_N: tl.constexpr,
+    BLOCK_M: [file], BLOCK_N: [file],
 ):
-    pid_m = tl.program_id(0)
-    pid_n = tl.program_id(1)
+    pid_m = [file]_id(0)
+    pid_n = [file]_id(1)
     
     # TMA load (hardware-accelerated on NVIDIA GPU)
-    offs_m = pid_m * BLOCK_M + tl.arange(0, BLOCK_M)
-    offs_n = pid_n * BLOCK_N + tl.arange(0, BLOCK_N)
+    offs_m = pid_m * BLOCK_M + [file](0, BLOCK_M)
+    offs_n = pid_n * BLOCK_N + [file](0, BLOCK_N)
     
     # Async TMA load
-    data = tl.load(
+    data = [file](
         input_ptr + offs_m[:, None] * N + offs_n[None, :],
         eviction_policy="evict_last"  # TMA hint
     )
     
     # Process data
-    result = data * 2.0
+    result = data * [file]
     
     # Store
-    tl.store(output_ptr + offs_m[:, None] * N + offs_n[None, :], result)
+    [file](output_ptr + offs_m[:, None] * N + offs_n[None, :], result)
 ```
 
 **When TMA works**: 20-30% faster loads than regular async copies.
 
 **How to run**:
 ```bash
-python3 triton_tma_blackwell.py
+python3 [script]
 ```
 
 ---
@@ -324,7 +324,7 @@ python3 triton_tma_blackwell.py
 
 **Purpose**: Test and benchmark NVIDIA GPU-specific optimizations.
 
-The comprehensive test suite is located in `tests/test_blackwell_optimizations.py`:
+The comprehensive test suite is located in [source file]:
 
 ```python
 import torch
@@ -332,12 +332,12 @@ import torch
 # Test tensor core formats
 def test_tensor_core_performance():
     # FP16 Tensor Cores
-    a_fp16 = torch.randn(4096, 4096, dtype=torch.float16, device='cuda')
-    b_fp16 = torch.randn(4096, 4096, dtype=torch.float16, device='cuda')
+    a_fp16 = [file](4096, 4096, dtype=[file], device='cuda')
+    b_fp16 = [file](4096, 4096, dtype=[file], device='cuda')
     
     # FP8 Tensor Cores (NVIDIA GPU)
-    a_fp8 = a_fp16.to(torch.float8_e4m3fn)
-    b_fp8 = b_fp16.to(torch.float8_e4m3fn)
+    a_fp8 = [file]([file]_e4m3fn)
+    b_fp8 = [file]([file]_e4m3fn)
     
     # Benchmark
     # FP16: ~1850 TFLOPS
@@ -347,16 +347,16 @@ def test_tensor_core_performance():
 **How to run**:
 ```bash
 # Run comprehensive test suite
-pytest tests/test_blackwell_optimizations.py -v
+pytest tests/[file] -v
 
 # Run specific test categories
-pytest tests/test_blackwell_optimizations.py -k test_fp8
-pytest tests/test_blackwell_optimizations.py -m 'not slow'
+pytest tests/[file] -k test_fp8
+pytest tests/[file] -m 'not slow'
 ```
 
 ---
 
-## torch.compile Compilation Process
+## [file] Compilation Process
 
 ### What Happens During Compilation?
 
@@ -399,29 +399,29 @@ pytest tests/test_blackwell_optimizations.py -m 'not slow'
 cd ch14
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
-# torch.compile examples
-python3 torch_compiler_examples.py
+# [file] examples
+python3 [script]
 
 # Triton examples
 pip install triton
-python3 triton_examples.py
-python3 triton_fp8_advanced.py
-python3 triton_tma_blackwell.py
+python3 [script]
+python3 [script]
+python3 [script]
 
 # NVIDIA GPU optimizations (comprehensive test suite)
-pytest tests/test_blackwell_optimizations.py -v
+pytest tests/[file] -v
 
 # Profile compiled code
-python3 ../../common/profiling/profile_pytorch.sh ./torch_compiler_examples.py
+python3 ../.[executable]/profiling/[file] [executable].py
 ```
 
 ---
 
 ## Key Takeaways
 
-1. **torch.compile is not magic**: Works best for compute-bound workloads with many small operations. Memory-bound large models see minimal benefit.
+1. **[file] is not magic**: Works best for compute-bound workloads with many small operations. Memory-bound large models see minimal benefit.
 
 2. **Compilation takes time**: First run is slow. Only worth it if you run many iterations (training) or deploy for inference.
 
@@ -429,18 +429,18 @@ python3 ../../common/profiling/profile_pytorch.sh ./torch_compiler_examples.py
 
 4. **Triton bridges Python and GPU**: Write high-performance kernels without learning CUDA C++. 90-95% of hand-tuned performance.
 
-5. **FP8 on NVIDIA GPU is powerful**: 2x faster than FP16 with Tensor Cores. Use Triton or torch.float8_e4m3fn.
+5. **FP8 on NVIDIA GPU is powerful**: 2x faster than FP16 with Tensor Cores. Use Triton or [file]_e4m3fn.
 
 6. **Dynamic shapes hurt compilation**: Compiler assumes static shapes. Dynamic shapes cause recompilation.
 
-7. **Profile to validate**: torch.compile can be slower! Always measure actual performance.
+7. **Profile to validate**: [file] can be slower! Always measure actual performance.
 
 ---
 
 ## Common Pitfalls
 
 ### Pitfall 1: Compiling Memory-Bound Models
-**Problem**: torch.compile on 40B model → Same or worse performance.
+**Problem**: [file] on 40B model → Same or worse performance.
 
 **Reality**: Large models are memory-bound. Compiler can't overcome bandwidth limits.
 
@@ -470,23 +470,23 @@ python3 ../../common/profiling/profile_pytorch.sh ./torch_compiler_examples.py
 
 ## Next Steps
 
-**Disaggregated inference** → [Chapter 15: Disaggregated Inference](../ch15/README.md)
+**Disaggregated inference** → [Chapter 15: Disaggregated Inference](.[executable]/[file])
 
 Learn about:
 - Prefill/decode separation
 - KV cache management
 - Architectural patterns for inference
 
-**Back to profiling** → [Chapter 13: PyTorch Profiling](../ch13/README.md)
+**Back to profiling** → [Chapter 13: PyTorch Profiling](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **torch.compile**: [PyTorch 2.0 Tutorial](https://pytorch.org/get-started/pytorch-2.0/)
-- **Triton**: [OpenAI Triton](https://github.com/openai/triton)
-- **TorchInductor**: [Compiler Architecture](https://dev-discuss.pytorch.org/t/torchinductor-a-pytorch-native-compiler-with-define-by-run-ir-and-symbolic-shapes/747)
-- **FP8 Training**: [NVIDIA Transformer Engine](https://docs.nvidia.com/deeplearning/transformer-engine/)
+- **[file]**: [PyTorch [file] Tutorial](https://[file]/get-started/pytorch-[file]/)
+- **Triton**: [OpenAI Triton](https://[file]/openai/triton)
+- **TorchInductor**: [Compiler Architecture](https://dev-[file].org/t/torchinductor-a-pytorch-native-compiler-with-define-by-run-ir-and-symbolic-shapes/747)
+- **FP8 Training**: [NVIDIA Transformer Engine](https://[file].com/deeplearning/transformer-engine/)
 
 ---
 

@@ -21,115 +21,109 @@ After completing this chapter, you can:
 
 **Hardware**: NVIDIA GPU
 
-**Software**: PyTorch 2.x+, CUDA 12.x+
+**Software**: PyTorch [file]+, CUDA [file]+
 
 ## Examples
 
-### 1. `performance_basics.py` - Baseline Implementation
+### 1. Baseline Implementation
 
-**Purpose**: Establish baseline goodput measurement methodology.
+**Purpose**: Establish baseline performance measurement methodology.
 
 **What it demonstrates**:
-- Measuring goodput (useful compute time / total iteration time)
 - Basic training loop structure
 - Common inefficiencies in naive implementations
+- Benchmark protocol integration
 
 **How to run**:
 ```bash
-python3 performance_basics.py
+python3 [baseline script]
 ```
 
 **Expected output**:
 ```
-goodput=X% (useful=Xs total=Xs)
+Baseline: Performance Basics
+======================================================================
+Average time: [file] ms
+Median: [file] ms
+Std: [file] ms
 ```
 
-Typical baseline: **40-60% goodput** (significant overhead!)
+Typical baseline: **40-60% goodput** (significant overhead from tensor creation and transfers)
 
 ---
 
-### 2. `performance_basics_optimized.py` - Optimized Implementation
+### 2. Optimized Implementations
 
-**Purpose**: Apply fundamental optimizations and measure cumulative impact.
+**Purpose**: Apply fundamental optimizations individually to measure impact.
 
-**Optimizations demonstrated**:
+This chapter demonstrates optimizations through separate benchmark files:
 
-#### Optimization 1: Preallocated Tensors
-**Problem**: `torch.randn()` and `torch.randint()` create new tensors on each iteration, causing 210ms CPU overhead (seen in profiling).
+#### 2a. Pinned Memory Optimization
 
-**Solution**: Preallocate device buffers once, reuse across iterations:
-```python
-data_buf = torch.empty(batch_size, 256, device=device)
-target_buf = torch.empty(batch_size, dtype=torch.long, device=device)
-```
-
-**Impact**: Eliminates 210ms overhead per batch → ~2x speedup
-
-#### Optimization 2: Pinned Memory DataLoader
 **Problem**: Unpinned memory requires CPU staging buffer for H2D transfers.
 
-**Solution**: Enable `pin_memory=True` in DataLoader:
+**Solution**: Use pinned memory for faster CPU-GPU transfers:
 ```python
-DataLoader(dataset, batch_size=32, pin_memory=True, num_workers=4)
+host_data = [file](32, 256, pin_memory=True)
+[file]_(host_data, non_blocking=True)  # Non-blocking copy
 ```
 
 **Impact**: 2-6x faster H2D transfers (varies by system)
 
-#### Optimization 3: CUDA Graphs
-**Problem**: Each kernel launch has ~5-20μs overhead. Small kernels spend more time launching than computing!
-
-**Solution**: Capture static computation graph:
-```python
-graph = torch.cuda.CUDAGraph()
-with torch.cuda.graph(graph):
-    output = model(input)
-graph.replay()  # Much faster than re-launching
+**How to run**:
+```bash
+python3 [pinned memory script]
 ```
 
-**Impact**: ~50-70% reduction in launch overhead
+#### 2b. Larger Batch Size Optimization
 
-#### Optimization 4: Larger Batch Sizes
 **Problem**: Small batches (32) underutilize GPU (low MFLOPs).
 
 **Solution**: Increase batch size to saturate compute:
 ```python
-batch_size = 128  # or 256, 512 depending on model/memory
+batch_size = 256  # vs baseline 32
 ```
 
 **Impact**: 87 MFLOPs → 1000+ MFLOPs (10x+ GEMM efficiency)
 
 **How to run**:
 ```bash
-python3 performance_basics_optimized.py
+python3 [batch size script]
 ```
 
-**Expected output**:
-```
-Performance Optimization Comparison
-====================================
+#### 2c. CUDA Graphs Optimization
 
-Test 1: Original Implementation
-Original - goodput=X% (useful=Xs total=Xs)
+**Problem**: Each kernel launch has ~5-20μs overhead. Small kernels spend more time launching than computing!
 
-Test 2: Pinned Memory DataLoader
-Pinned Memory - goodput=Y% (useful=Ys total=Ys)
-
-Test 3: CUDA Graphs + Larger Batch
-Optimized (CUDA Graphs) - goodput=Z% (useful=Zs total=Zs)
-Speedup vs baseline: ~Ax
-
-Test 4: Batch Size Impact
-Batch  32: X.XX ms/iter, XXX MFLOPs
-Batch  64: X.XX ms/iter, XXX MFLOPs
-Batch 128: X.XX ms/iter, XXXX MFLOPs
-Batch 256: X.XX ms/iter, XXXX MFLOPs
+**Solution**: Capture static computation graph and replay:
+```python
+graph = [file].CUDAGraph()
+with [file].graph(graph):
+    output = model(input)
+[file]()  # Much faster than re-launching
 ```
 
-**Expected overall speedup**: **2-5x** (varies by workload)
+**Impact**: ~50-70% reduction in launch overhead
+
+**Key optimizations also included**:
+- Preallocated device buffers (eliminates tensor creation overhead)
+- Pinned memory for faster transfers
+
+**How to run**:
+```bash
+python3 [CUDA graphs script]
+```
+
+**Compare all optimizations**:
+```bash
+python3 [compare script]  # Compares baseline vs all optimized variants
+```
+
+**Expected overall speedup**: **2-5x** (varies by workload and hardware)
 
 ---
 
-### 3. `batched_gemm_example.cu` - CUDA Batched GEMM
+### 3. CUDA GEMM Examples - Batched GEMM Optimization
 
 **Purpose**: Demonstrate importance of batched operations at CUDA level.
 
@@ -147,14 +141,14 @@ cublasSgemmBatched(handle, ..., batch_count);
 ```bash
 cd ch1
 make
-./batched_gemm_example
+# Run the compiled binaries (architecture suffix added automatically)
 ```
 
 **Expected output**:
 ```
 Individual GEMMs: XXX ms
 Batched GEMM:     YYY ms
-Speedup:          31.2x
+Speedup:          [file]
 ```
 
 **Typical speedup**: **20-40x** (more dramatic for small matrices)
@@ -163,7 +157,7 @@ Speedup:          31.2x
 
 ---
 
-### 4. `roofline_analysis.py` - Roofline Performance Model
+### 4. Roofline Performance Model
 
 **Purpose**: Implement roofline analysis to classify kernels as compute-bound or memory-bound.
 
@@ -181,46 +175,48 @@ Speedup:          31.2x
 
 **How to run**:
 ```bash
-python3 roofline_analysis.py
+python3 [roofline analysis script]
 ```
 
 **Expected output**:
 ```
 Vector Add:
-  AI: 0.0833 FLOP/Byte
-  Achieved: 0.45 TFLOPS
+  AI: [file] FLOP/Byte
+  Achieved: [file] TFLOPS
   Memory-bound (AI << 250)
 
 Matrix Multiply:
-  AI: 682.67 FLOP/Byte
-  Achieved: 145.23 TFLOPS
+  AI: [file] FLOP/Byte
+  Achieved: [file] TFLOPS
   Compute-bound (AI > 250)
 
-Roofline plot saved to roofline_plot.png
+Roofline plot saved to [file]
 ```
 
 ---
 
 ### Chapter profiling
 
-Chapter profiling is handled by `ch1/compare.py`. Run it from the project root:
+Chapter profiling is handled by the compare script. Run it from the project root:
 
 ```bash
-python3 -c "from ch1.compare import profile; profile()"
+python3 -c "from [file] import profile; profile()"
 ```
 
 Or run benchmarks using the unified entry point:
 ```bash
-python benchmark.py --chapter 1
+python [benchmark script] --chapter 1
 ```
 
 **Key insight**: Operations below the ridge point are limited by memory bandwidth, not compute!
 
 ---
 
-### 5. `arithmetic_intensity_demo_sm100` - Kernel Optimization Strategies
+### 5. Arithmetic Intensity Optimization - Kernel Optimization Strategies
 
-**Purpose**: Show five kernel optimization techniques and their impact on arithmetic intensity.
+**Purpose**: Show kernel optimization techniques and their impact on arithmetic intensity.
+
+**Implementation**: Baseline and optimized CUDA kernels demonstrating progressive optimizations
 
 **What it demonstrates**:
 - **Baseline**: Simple element-wise kernel
@@ -231,38 +227,38 @@ python benchmark.py --chapter 1
 
 **Performance progression**:
 ```
-Baseline:     125 GB/s,  AI = 0.25 FLOP/Byte
-Unrolled:     145 GB/s,  AI = 0.25 FLOP/Byte (better utilization)
-Vectorized:   245 GB/s,  AI = 0.25 FLOP/Byte (coalescing + bandwidth)
-More FLOPs:   280 GB/s,  AI = 1.50 FLOP/Byte (6x better AI!)
-Fused:        420 GB/s,  AI = 3.00 FLOP/Byte (12x better AI!)
+Baseline:     125 GB/s,  AI = [file] FLOP/Byte
+Unrolled:     145 GB/s,  AI = [file] FLOP/Byte (better utilization)
+Vectorized:   245 GB/s,  AI = [file] FLOP/Byte (coalescing + bandwidth)
+More FLOPs:   280 GB/s,  AI = [file] FLOP/Byte (6x better AI!)
+Fused:        420 GB/s,  AI = [file] FLOP/Byte (12x better AI!)
 ```
 
 **How to run**:
 ```bash
-make arithmetic_intensity_demo
-./arithmetic_intensity_demo_sm100
-```
+make
+# Run the compiled binaries (add appropriate architecture suffix)
+# Example: ```
 
 **Expected output**:
 ```
 Arithmetic Intensity Optimization Demo (N = 10M elements)
 
 Baseline kernel:
-  Time: 2.45 ms, Bandwidth: 122.4 GB/s, AI: 0.25 FLOP/Byte
+  Time: [file] ms, Bandwidth: [file] GB/s, AI: [file] FLOP/Byte
 
 Unrolled kernel:  
-  Time: 2.12 ms, Bandwidth: 141.5 GB/s, AI: 0.25 FLOP/Byte
+  Time: [file] ms, Bandwidth: [file] GB/s, AI: [file] FLOP/Byte
 
 Vectorized kernel:
-  Time: 1.24 ms, Bandwidth: 241.9 GB/s, AI: 0.25 FLOP/Byte
+  Time: [file] ms, Bandwidth: [file] GB/s, AI: [file] FLOP/Byte
 
 Optimized kernel (more FLOPs):
-  Time: 1.08 ms, Bandwidth: 277.8 GB/s, AI: 1.50 FLOP/Byte
+  Time: [file] ms, Bandwidth: [file] GB/s, AI: [file] FLOP/Byte
 
 Fused kernel:
-  Time: 0.72 ms, Bandwidth: 416.7 GB/s, AI: 3.00 FLOP/Byte
-  Overall speedup: 3.4x
+  Time: [file] ms, Bandwidth: [file] GB/s, AI: [file] FLOP/Byte
+  Overall speedup: [file]
 ```
 
 **Key insight**: Increasing arithmetic intensity (more FLOPs per byte) reduces memory bottlenecks and improves performance!
@@ -276,11 +272,12 @@ Fused kernel:
 Use the common profiling infrastructure:
 
 ```bash
-# Profile Python example
-../../common/profiling/profile_pytorch.sh ./performance_basics.py
+# Profile Python examples
+../.[executable]/profiling/[file] [baseline script]
+../.[executable]/profiling/[file] [optimized script]
 
 # View timeline in Nsight Systems
-nsys-ui ../../results/ch1/performance_basics_pytorch_*.nsys-rep
+nsys-ui [profile output file]
 ```
 
 **What to look for**:
@@ -295,7 +292,7 @@ nsys-ui ../../results/ch1/performance_basics_pytorch_*.nsys-rep
 |--------------|---------------------|---------|
 | Preallocated buffers | 210ms overhead → 0ms | ~2x |
 | Pinned memory | System dependent | 2-6x |
-| CUDA Graphs | 5-20μs/launch → <1μs | 1.5-2x |
+| CUDA Graphs | 5-20μs/launch → <1μs | [file]-2x |
 | Larger batches | 87 MFLOPs → 1000+ | 10x+ |
 | **Combined** | **Overall end-to-end** | **5-10x** |
 
@@ -305,21 +302,21 @@ nsys-ui ../../results/ch1/performance_basics_pytorch_*.nsys-rep
 
 ## Baseline/Optimized Example Pairs
 
-All examples follow the `baseline_*.py` / `optimized_*.py` pattern and integrate with the benchmarking framework:
+All examples follow the baseline/optimized pattern and integrate with the benchmarking framework:
 
 ### Available Pairs
 
-1. **Coalescing** (`baseline_coalescing.py` / `optimized_coalescing.py`)
+1. **Coalescing** - Baseline and optimized implementations
    - Demonstrates coalesced vs uncoalesced memory access patterns
    - Shows bandwidth improvements from proper memory access
 
-2. **Double Buffering** (`baseline_double_buffering.py` / `optimized_double_buffering.py`)
+2. **Double Buffering** - Baseline and optimized implementations
    - Overlaps memory transfer and computation using CUDA streams
    - Demonstrates latency hiding through async operations
 
 **Run comparisons:**
 ```bash
-python3 compare.py  # Compares all baseline/optimized pairs
+python3 [compare script]  # Compares all baseline/optimized pairs
 ```
 
 ---
@@ -330,24 +327,26 @@ python3 compare.py  # Compares all baseline/optimized pairs
 cd ch1
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
 # Run Python examples
-python3 performance_basics.py                    # Baseline
-python3 performance_basics_optimized.py          # Optimized comparisons
-python3 roofline_analysis.py                     # Roofline model
+python3 [baseline script]                        # Baseline
+python3 [pinned memory script]                   # Pinned memory optimization
+python3 [batch size script]                      # Larger batch size
+python3 [CUDA graphs script]                     # CUDA Graphs optimization
+python3 [roofline script]                        # Roofline model
 
 # Run baseline/optimized comparisons
-python3 compare.py                               # Compare all pairs
+python3 [compare script]                         # Compare all pairs
 
 # Build and run CUDA examples
 make
-./batched_gemm_example_sm100                     # Batched GEMM
-./arithmetic_intensity_demo_sm100                # Kernel optimization strategies
+# Run compiled binaries (architecture suffix added automatically)
 
 # Profile examples (optional)
-../../common/profiling/profile_pytorch.sh ./performance_basics_optimized.py
-../../common/profiling/profile_cuda.sh ./arithmetic_intensity_demo_sm100 ch1_ai
+../.[executable]/profiling/[file] [baseline script]
+../.[executable]/profiling/[file] [optimized script]
+../.[executable]/profiling/[file] [CUDA binary] ch1_ai
 ```
 
 ---
@@ -362,7 +361,7 @@ make
 
 4. **Launch overhead is real**: For small operations, kernel launch overhead dominates. CUDA Graphs and batching mitigate this.
 
-5. **Compound improvements**: Individual optimizations multiply. A 2x + 2x + 1.5x → 6x combined speedup.
+5. **Compound improvements**: Individual optimizations multiply. A 2x + 2x + [file] → 6x combined speedup.
 
 6. **Low-hanging fruit**: These optimizations require minimal code changes but deliver major improvements. Always apply them first!
 
@@ -373,7 +372,7 @@ make
 ### Pitfall 1: Over-batching
 **Problem**: Batch size too large → OOM (out of memory) errors.
 
-**Solution**: Find sweet spot using batch size sweep (shown in `performance_basics_optimized.py`). Typical range: 64-512 for modern NVIDIA GPUs.
+**Solution**: Find sweet spot using batch size sweep. Typical range: 64-512 for modern NVIDIA GPUs.
 
 ### Pitfall 2: CUDA Graphs with Dynamic Shapes
 **Problem**: CUDA Graphs require static shapes. Dynamic models will fail or show no speedup.
@@ -381,15 +380,15 @@ make
 **Solution**: Only use graphs for static portions of your model. Prefill/decode in inference are good candidates.
 
 ### Pitfall 3: Measuring Without Synchronization
-**Problem**: CUDA operations are async. `time.time()` without `torch.cuda.synchronize()` measures queue time, not execution time!
+**Problem**: CUDA operations are async. `[file]()` without `[file].synchronize()` measures queue time, not execution time!
 
 **Solution**: Always synchronize before timing:
 ```python
-torch.cuda.synchronize()
-start = time.time()
+[file].synchronize()
+start = [file]()
 model(input)
-torch.cuda.synchronize()  # Critical!
-elapsed = time.time() - start
+[file].synchronize()  # Critical!
+elapsed = [file]() - start
 ```
 
 ### Pitfall 4: Cold Start Measurements
@@ -401,7 +400,7 @@ elapsed = time.time() - start
 
 ## Next Steps
 
-**Ready for more?** → [Chapter 2: GPU Hardware Architecture](../ch2/README.md)
+**Ready for more?** → [Chapter 2: GPU Hardware Architecture](.[executable]/[file])
 
 Learn about:
 - NVIDIA GPU hardware architecture
@@ -409,15 +408,15 @@ Learn about:
 - NVLink and interconnects
 - How hardware architecture informs optimization strategy
 
-**Want to dive deeper into profiling?** → [Chapter 13: PyTorch Profiling](../ch13/README.md)
+**Want to dive deeper into profiling?** → [Chapter 13: PyTorch Profiling](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **Official Docs**: [PyTorch Performance Tuning Guide](https://pytorch.org/tutorials/recipes/recipes/tuning_guide.html)
-- **cuBLAS Documentation**: [CUDA Toolkit Docs - cuBLAS](https://docs.nvidia.com/cuda/cublas/)
-- **CUDA Graphs**: [CUDA Programming Guide - Graphs](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-graphs)
+- **Official Docs**: [PyTorch Performance Tuning Guide](https://[file]/tutorials/recipes/recipes/[file])
+- **cuBLAS Documentation**: [CUDA Toolkit Docs - cuBLAS](https://[file].com/cuda/cublas/)
+- **CUDA Graphs**: [CUDA Programming Guide - Graphs](https://[file].com/cuda/cuda-c-programming-guide/[file]#cuda-graphs)
 
 ---
 

@@ -21,13 +21,21 @@ warp_specialized_two_pipelines_multistream$(SUFFIX): warp_specialized_two_pipeli
 	$(NVCC) $(NVCC_FLAGS) -o $@ $<
 
 # Architecture-specific targets
-blackwell: ARCH=sm_100
-blackwell: clean all
-	@echo "✓ Built for Blackwell B200/B300 (discrete GPU)"
+b200: ARCH=sm_100
+b200: clean all
+	@echo "✓ Built for B200 (discrete GPU)"
 
-grace-blackwell: ARCH=sm_121
-grace-blackwell: clean all
-	@echo "✓ Built for Grace-Blackwell GB10 (integrated superchip)"
+gb10: ARCH=sm_121
+gb10: clean all
+	@echo "✓ Built for GB10 (integrated superchip)"
+
+b300: ARCH=sm_103
+b300: clean all
+	@echo "✓ Built for B300 (discrete GPU)"
+
+gb300: ARCH=sm_103
+gb300: clean all
+	@echo "✓ Built for GB300 (integrated superchip)"
 
 # Build BOTH versions for comparison benchmarking
 compare: clean
@@ -119,4 +127,4 @@ benchmark-compare: compare
 	@echo "  benchmark_sm121.log - Grace-Blackwell superchip"
 	@echo "========================================"
 
-.PHONY: all blackwell grace-blackwell compare benchmark-compare profile-nsys profile-ncu profile-hta profile-perf profile-all clean
+.PHONY: all b200 gb10 b300 gb300 compare benchmark-compare profile-nsys profile-ncu profile-hta profile-perf profile-all clean

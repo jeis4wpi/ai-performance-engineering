@@ -1,0 +1,44 @@
+"""Python harness wrapper for ch7's optimized_copy_vectorized.cu."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+repo_root = Path(__file__).parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
+from common.python.benchmark_harness import BenchmarkHarness, BenchmarkMode
+from common.python.cuda_binary_benchmark import CudaBinaryBenchmark
+
+
+class OptimizedCopyVectorizedBenchmark(CudaBinaryBenchmark):
+    """Wraps the vectorized copy kernel that prints CUDA 13 timing."""
+
+    def __init__(self) -> None:
+        chapter_dir = Path(__file__).parent
+        super().__init__(
+            chapter_dir=chapter_dir,
+            binary_name="optimized_copy_vectorized",
+            friendly_name="Ch7 Vectorized Copy",
+            iterations=3,
+            warmup=1,
+            timeout_seconds=120,
+        )
+
+
+def get_benchmark() -> OptimizedCopyVectorizedBenchmark:
+    """Factory for discover_benchmarks()."""
+    return OptimizedCopyVectorizedBenchmark()
+
+
+if __name__ == "__main__":
+    benchmark = get_benchmark()
+    harness = BenchmarkHarness(
+        mode=BenchmarkMode.CUSTOM,
+        config=benchmark.get_config(),
+    )
+    result = harness.benchmark(benchmark)
+    print(f"\nCh7 Vectorized Copy (optimized): {result.mean_ms:.3f} ms")
+

@@ -9,7 +9,7 @@ SUFFIX = $(TARGET_SUFFIX)
 BASE_TARGETS = baseline_memory_transfer optimized_memory_transfer_zero_copy optimized_memory_transfer_nvlink cpu_gpu_grace_blackwell_coherency
 TARGETS = $(addsuffix $(SUFFIX), $(BASE_TARGETS))
 
-.PHONY: all clean compare profile-hta profile-perf profile-all blackwell grace-blackwell debug $(TARGETS)
+.PHONY: all clean compare profile-hta profile-perf profile-all b200 gb10 b300 gb300 debug $(TARGETS)
 
 all: $(TARGETS)
 	@echo "Building Chapter 2 targets with $(ARCH) (CUDA $(CUDA_VERSION))"
@@ -38,14 +38,20 @@ compare: clean
 	done
 	@echo ""
 	@echo "Run binaries:"
-	@echo "  ./nvlink_c2c_p2p_blackwell_sm100"
-	@echo "  ./nvlink_c2c_p2p_blackwell_sm121"
+	@echo "  ./optimized_memory_transfer_nvlink_sm100"
+	@echo "  ./optimized_memory_transfer_nvlink_sm121"
 
-blackwell: ARCH=sm_100
-blackwell: clean all
+b200: ARCH=sm_100
+b200: clean all
 
-grace-blackwell: ARCH=sm_121
-grace-blackwell: clean all
+gb10: ARCH=sm_121
+gb10: clean all
+
+b300: ARCH=sm_103
+b300: clean all
+
+gb300: ARCH=sm_103
+gb300: clean all
 
 profile-hta: all
 	@echo "HTA (Holistic Tracing Analysis) profiling..."
@@ -83,12 +89,12 @@ profile-all: all
 	done
 
 clean:
-	rm -f nvlink_c2c_p2p_blackwell_sm100 nvlink_c2c_p2p_blackwell_sm121
+	rm -f optimized_memory_transfer_nvlink_sm100 optimized_memory_transfer_nvlink_sm121
 	rm -f cpu_gpu_grace_blackwell_coherency_sm100 cpu_gpu_grace_blackwell_coherency_sm121
 	rm -f cpu_gpu_zero_copy_coherent_sm100 cpu_gpu_zero_copy_coherent_sm121
 	rm -f *.o *.so *.a
 	rm -f nsys_profile_* hta_profile_* perf.data_* comprehensive_*
 debug:
 	@echo "Building Chapter 2 debug targets with lineinfo and -G"
-	$(NVCC) $(NVCC_DEBUG_FLAGS) -o nvlink_c2c_p2p_blackwell_debug nvlink_c2c_p2p_blackwell.cu
+	$(NVCC) $(NVCC_DEBUG_FLAGS) -o optimized_memory_transfer_nvlink_debug optimized_memory_transfer_nvlink.cu
 	$(NVCC) $(NVCC_DEBUG_FLAGS) -o cpu_gpu_grace_blackwell_coherency_debug cpu_gpu_grace_blackwell_coherency.cu

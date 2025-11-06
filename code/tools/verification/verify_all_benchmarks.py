@@ -28,6 +28,10 @@ if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))
 
 
+# Default timeout constant (15 seconds - required for all benchmarks)
+DEFAULT_TIMEOUT = 15
+
+
 def check_syntax(file_path: Path) -> Tuple[bool, Optional[str]]:
     """Check if Python file has valid syntax."""
     try:
@@ -40,27 +44,55 @@ def check_syntax(file_path: Path) -> Tuple[bool, Optional[str]]:
         return False, f"Compile error: {e}"
 
 
-def load_benchmark(file_path: Path) -> Tuple[Optional[object], Optional[str]]:
-    """Load benchmark from file and return instance."""
-    try:
-        spec = importlib.util.spec_from_file_location(file_path.stem, file_path)
-        if spec is None or spec.loader is None:
-            return None, "Could not create module spec"
+def load_benchmark(file_path: Path, timeout_seconds: int = DEFAULT_TIMEOUT) -> Tuple[Optional[object], Optional[str]]:
+    """Load benchmark from file and return instance.
+    
+    Uses threading timeout to prevent hangs during module import or get_benchmark() calls.
+    
+    Args:
+        file_path: Path to Python file with Benchmark implementation
+        timeout_seconds: Maximum time to wait for module load (default: 15 seconds)
         
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        
-        if not hasattr(module, 'get_benchmark'):
-            return None, "Missing get_benchmark() function"
-        
-        benchmark = module.get_benchmark()
-        return benchmark, None
-    except Exception as e:
-        return None, f"Load error: {e}"
-
-
-# Default timeout constant (15 seconds - required for all benchmarks)
-DEFAULT_TIMEOUT = 15
+    Returns:
+        Tuple of (benchmark_instance, error_message). If successful: (benchmark, None).
+        If failed or timed out: (None, error_string).
+    """
+    import threading
+    
+    result = {"benchmark": None, "error": None, "done": False}
+    
+    def load_internal():
+        try:
+            spec = importlib.util.spec_from_file_location(file_path.stem, file_path)
+            if spec is None or spec.loader is None:
+                result["error"] = "Could not create module spec"
+                return
+            
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            
+            if not hasattr(module, 'get_benchmark'):
+                result["error"] = "Missing get_benchmark() function"
+                return
+            
+            result["benchmark"] = module.get_benchmark()
+        except Exception as e:
+            result["error"] = f"Load error: {e}"
+        finally:
+            result["done"] = True
+    
+    # Run load in a thread with timeout to prevent hangs
+    thread = threading.Thread(target=load_internal, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout_seconds)
+    
+    if not result["done"]:
+        return None, f"TIMEOUT: exceeded {timeout_seconds} second timeout"
+    
+    if result["error"]:
+        return None, result["error"]
+    
+    return result["benchmark"], None
 
 
 def test_benchmark(benchmark: object, timeout: int = DEFAULT_TIMEOUT) -> Tuple[bool, Optional[str]]:
@@ -121,7 +153,7 @@ def test_benchmark(benchmark: object, timeout: int = DEFAULT_TIMEOUT) -> Tuple[b
             execution_result["done"] = True
     
     # Run benchmark in thread with timeout (required, default 15 seconds)
-    print(f"Running benchmark with {timeout}s timeout...")
+    # Only print timeout message if timeout actually occurs (not upfront)
     thread = threading.Thread(target=run_benchmark, daemon=True)
     thread.start()
     thread.join(timeout=timeout)

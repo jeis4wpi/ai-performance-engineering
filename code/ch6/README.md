@@ -18,8 +18,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**: 
-- [Chapter 1: Performance Basics](../ch1/README.md) - profiling fundamentals
-- [Chapter 2: NVIDIA GPU Hardware](../ch2/README.md) - GPU architecture basics
+- [Chapter 1: Performance Basics](.[executable]/README.md) - profiling fundamentals
+- [Chapter 2: NVIDIA GPU Hardware](.[executable]/README.md) - GPU architecture basics
 
 **Required**: Basic C/C++ knowledge, CUDA-capable GPU
 
@@ -51,7 +51,7 @@ Key constraints (NVIDIA GPU):
 
 ## Examples
 
-### 1. `my_first_kernel.cu` - Hello World
+###  Hello World
 
 **Purpose**: Simplest possible CUDA kernel - print from GPU.
 
@@ -78,7 +78,6 @@ int main() {
 **How to run**:
 ```bash
 make my_first_kernel
-./my_first_kernel_sm100
 ```
 
 **Expected output**:
@@ -91,7 +90,7 @@ Hello from thread 3 in block 1
 
 ---
 
-### 2. `simple_kernel.cu` - Element-wise Operation
+###  Element-wise Operation
 
 **Purpose**: Demonstrates complete CUDA workflow with memory management and kernel launch configuration from the book.
 
@@ -156,7 +155,6 @@ int main() {
 **How to run**:
 ```bash
 make simple_kernel
-./simple_kernel_sm100
 ```
 
 **Expected output**:
@@ -172,11 +170,11 @@ Simple kernel succeeded: 1000000 elements scaled by 2.0f
 
 ---
 
-### 3. `add_sequential.cu` → `add_parallel.cu` - Baseline vs Optimized
+### 3. [baseline] → [optimized] - Baseline vs Optimized
 
 **Purpose**: Demonstrate the fundamental parallelization pattern: sequential → parallel.
 
-#### Baseline: `add_sequential.cu`
+#### Baseline
 
 **Problem**: Single thread does all work (underutilizes GPU).
 
@@ -195,7 +193,7 @@ __global__ void addSequential(const float* A, const float* B, float* C, int n) {
 
 **Performance**: ~2,000x slower than parallel version!
 
-#### Optimized: `add_parallel.cu`
+#### Optimized
 
 **Solution**: Each thread processes one element.
 
@@ -219,8 +217,6 @@ This is the most common indexing pattern in CUDA!
 **How to run**:
 ```bash
 make add_sequential add_parallel
-./add_sequential_sm100  # Slow
-./add_parallel_sm100    # Fast!
 ```
 
 **Expected speedup**: **~2000x** (1,000,000 elements)
@@ -231,7 +227,7 @@ make add_sequential add_parallel
 
 ---
 
-### 4. `2d_kernel.cu` - 2D Thread Indexing
+###  2D Thread Indexing
 
 **Purpose**: Extend to 2D problems (images, matrices).
 
@@ -258,12 +254,11 @@ process2D<<<blocks, threads>>>(matrix, width, height);
 **How to run**:
 ```bash
 make 2d_kernel
-./2d_kernel_sm100
 ```
 
 ---
 
-### 5. `occupancy_api.cu` - Occupancy Calculation
+###  Occupancy Calculation
 
 **Purpose**: Understand occupancy and resource limits.
 
@@ -293,7 +288,6 @@ printf("Occupancy: %.1f%%\n", occupancy * 100);
 **How to run**:
 ```bash
 make occupancy_api
-./occupancy_api_sm100
 ```
 
 **Expected output**:
@@ -311,7 +305,7 @@ Occupancy: 100% (full SM utilization) [OK]
 
 ---
 
-### 6. `launch_bounds_example.cu` - Control Resource Usage
+### 6. `[CUDA file]` (see source files for implementation) - Control Resource Usage
 
 **Purpose**: Use `__launch_bounds__` to optimize register and shared memory usage.
 
@@ -333,12 +327,11 @@ myKernel(float* data) {
 **How to run**:
 ```bash
 make launch_bounds_example
-./launch_bounds_example_sm100
 ```
 
 ---
 
-### 7. `unified_memory.cu` - Managed Memory
+###  Managed Memory
 
 **Purpose**: Simplify memory management with CUDA Unified Memory.
 
@@ -375,7 +368,6 @@ kernel<<<...>>>(data);  // Automatic migration
 **How to run**:
 ```bash
 make unified_memory
-./unified_memory_sm100
 ```
 
 ---
@@ -429,11 +421,11 @@ dim3 blocks(
 
 ```bash
 # Profile CUDA kernel
-../../common/profiling/profile_cuda.sh ./add_parallel baseline
-../../common/profiling/profile_cuda.sh ./add_sequential baseline
+../.[executable]/profiling/profile_cuda.sh [executable] baseline
+../.[executable]/profiling/profile_cuda.sh [executable] baseline
 
 # Compare in Nsight Compute
-ncu-ui ../../results/ch6/add_parallel_baseline_metrics_*.ncu-rep
+ncu-ui ../.[executable]/ch6/add_parallel_baseline_metrics_*.ncu-rep
 ```
 
 ### Key Metrics to Watch
@@ -453,25 +445,25 @@ All CUDA examples follow the `baseline_*.cu` / `optimized_*.cu` pattern:
 
 ### Available Pairs
 
-1. **Add Operation** (`baseline_add.cu` / `optimized_add_parallel.cu`)
+1. **Add Operation** ([source file] / [source file])
    - Sequential vs parallel vector addition
    - Demonstrates basic parallelization patterns
 
-2. **Coalescing** (`baseline_coalescing_uncoalesced.cu` / `optimized_coalescing.cu`)
+2. **Coalescing** ([source file] / [source file])
    - Uncoalesced vs coalesced memory access
    - Shows bandwidth improvements from proper access patterns
 
-3. **Bank Conflicts** (`baseline_bank_conflicts.cu` / `optimized_bank_conflicts.cu`)
+3. **Bank Conflicts** ([source file] / [source file])
    - Shared memory bank conflicts and padding solution
    - Demonstrates eliminating bank conflicts with padding
 
-4. **Instruction-Level Parallelism** (`baseline_ilp.cu` / `optimized_ilp.cu`)
+4. **Instruction-Level Parallelism** ([source file] / [source file])
    - Sequential vs independent operations and loop unrolling
    - Shows ILP benefits for instruction latency hiding
 
 **Run comparisons:**
 ```bash
-python3 compare.py  # Compares all baseline/optimized pairs (via Python wrappers)
+python3 [script]  # Compares all baseline/optimized pairs (via Python wrappers)
 ```
 
 ---
@@ -485,22 +477,9 @@ cd ch6
 make
 
 # Run in order of complexity
-./my_first_kernel_sm100          # Hello world
-./baseline_add_sm100             # Baseline (slow)
-./optimized_add_parallel_sm100   # Optimized (fast!)
-./baseline_coalescing_uncoalesced_sm100  # Uncoalesced access
-./optimized_coalescing_sm100     # Coalesced access
-./baseline_bank_conflicts_sm100  # Bank conflicts
-./optimized_bank_conflicts_sm100 # No conflicts (padded)
-./baseline_ilp_sm100             # Sequential ops
-./optimized_ilp_sm100            # Independent ops + unrolling
-./2d_kernel_sm100                # 2D indexing
-./occupancy_api_sm100            # Check occupancy
-./launch_bounds_example_sm100    # Resource control
-./unified_memory_sm100           # Managed memory
 
 # Profile for learning
-../../common/profiling/profile_cuda.sh ./optimized_add_parallel baseline
+../.[executable]/profiling/profile_cuda.sh [executable] baseline
 ```
 
 ---
@@ -571,7 +550,7 @@ cudaDeviceSynchronize();  // Wait for completion
 
 ## Next Steps
 
-**Continue CUDA mastery** → [Chapter 7: Memory Access Patterns](../ch7/README.md)
+**Continue CUDA mastery** → [Chapter 7: Memory Access Patterns](.[executable]/README.md)
 
 Learn about:
 - Memory coalescing for 10x bandwidth improvement
@@ -579,7 +558,7 @@ Learn about:
 - Bank conflicts and how to avoid them
 - Vectorized memory access
 
-**Back to PyTorch land** → [Chapter 13: PyTorch Profiling](../ch13/README.md)
+**Back to PyTorch land** → [Chapter 13: PyTorch Profiling](.[executable]/README.md)
 
 ---
 
@@ -588,7 +567,7 @@ Learn about:
 - **CUDA C Programming Guide**: [Official NVIDIA Docs](https://docs.nvidia.com/cuda/cuda-c-programming-guide/)
 - **CUDA Best Practices**: [Performance Guidelines](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/)
 - **Nsight Compute**: [Profiler User Guide](https://docs.nvidia.com/nsight-compute/)
-- **Common Headers**: See `../../common/headers/cuda_helpers.cuh` for error checking macros
+- **Common Headers**: See `../.[executable]/headers/cuda_helpers.cuh` for error checking macros
 
 ---
 

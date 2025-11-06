@@ -134,15 +134,20 @@ def main() -> None:
         env[var] = os.pathsep.join(segments)
 
     print(f"[extract-ncu] Running: {' '.join(command)}")
-    completed = subprocess.run(  # noqa: S603
-        command,
-        cwd=str(example.resolved_workdir(HARNESS_ROOT)),
-        env=env,
-        check=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    try:
+        completed = subprocess.run(  # noqa: S603
+            command,
+            cwd=str(example.resolved_workdir(HARNESS_ROOT)),
+            env=env,
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=60,  # 60 second timeout - extraction can be slow for detailed reports
+        )
+    except subprocess.TimeoutExpired:
+        print(f"[extract-ncu] WARNING: NCU extraction timed out after 60s (file may be very large or hanging)")
+        return
 
     raw_output = completed.stdout
     stderr_path = output_path.with_suffix(".stderr.log")

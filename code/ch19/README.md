@@ -18,10 +18,10 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 10: Tensor Cores](../ch10/README.md) - matrix operations with tensor cores
-- [Chapter 16: Inference Optimization](../ch16/README.md) - FP8 inference basics
+- [Chapter 10: Tensor Cores](.[executable]/[file]) - matrix operations with tensor cores
+- [Chapter 16: Inference Optimization](.[executable]/[file]) - FP8 inference basics
 
-**Required**: NVIDIA GPU NVIDIA GPU/B300 GPU (SM 10.0) or NVIDIA GPU (SM 12.1), PyTorch 2.9+, CUDA 13.0+
+**Required**: NVIDIA GPU NVIDIA GPU/B300 GPU (SM [file]) or NVIDIA GPU (SM [file]), PyTorch [file]+, CUDA [file]+
 
 ---
 
@@ -32,7 +32,7 @@ After completing this chapter, you can:
 | Precision | Bits | TFLOPS (NVIDIA GPU) | Memory vs FP16 | Best For |
 |-----------|------|---------------|----------------|----------|
 | **FP4 (E2M1)** | 4 | ~1600 | 75% savings (4x) | Draft models, speculative decoding |
-| **FP6 (E3M2)** | 6 | ~1400 | 50% savings (2.67x) | Balanced accuracy/compression |
+| **FP6 (E3M2)** | 6 | ~1400 | 50% savings ([file]) | Balanced accuracy/compression |
 | **FP8 (E4M3)** | 8 | ~450 | 50% savings (2x) | Production training & inference |
 | **FP16** | 16 | ~225 | Baseline | Standard precision |
 | **FP32** | 32 | ~225 | 2x memory | Legacy/debugging |
@@ -40,15 +40,15 @@ After completing this chapter, you can:
 ### Format Details
 
 #### FP4 (E2M1) - NVFP4
-- **Exponent**: 2 bits → Range: ~[0.125, 3.5]
+- **Exponent**: 2 bits → Range: ~[[file], [file]]
 - **Mantissa**: 1 bit + implicit leading 1
 - **Use case**: Maximum compression, ~25% quantization error acceptable
 - **NVIDIA GPU feature**: Hardware microscaling support
 
 #### FP6 (E3M2) - NVFP6
-- **Exponent**: 3 bits → Range: ~[0.03, 60]
+- **Exponent**: 3 bits → Range: ~[[file], 60]
 - **Mantissa**: 2 bits + implicit leading 1
-- **Use case**: Better accuracy than FP4 (~12.5% error), still high compression
+- **Use case**: Better accuracy than FP4 (~[file]% error), still high compression
 - **NVIDIA GPU feature**: Native hardware support
 
 #### FP8 (E4M3FN) - NVFP8
@@ -61,7 +61,7 @@ After completing this chapter, you can:
 
 ## Examples
 
-### 1. `native_fp8_training.py` - Production FP8 Training
+###  Production FP8 Training
 
 **Purpose**: Full production FP8 training pipeline with scaling management.
 
@@ -74,61 +74,61 @@ After completing this chapter, you can:
 **How to run**:
 ```bash
 # Basic training
-python native_fp8_training.py --epochs 10
+python [file] --epochs 10
 
 # With profiling
-nsys profile -o fp8_training --trace=cuda,nvtx python native_fp8_training.py
+nsys profile [script]
 
 # Validate against FP16
-python native_fp8_training.py --epochs 10 --validate-fp16
+python [file] --epochs 10 --validate-fp16
 ```
 
 **Expected results** (8x NVIDIA GPU):
 ```
 FP16 training: 50ms/iteration, 2048 MB memory
 FP8 training:  28ms/iteration, 1024 MB memory
-Speedup: 1.8x, Memory: 50% savings [OK]
-Accuracy: <0.1% loss vs FP16
+Speedup: [file], Memory: 50% savings [OK]
+Accuracy: <[file]% loss vs FP16
 ```
 
 **Code structure**:
 ```python
-from torch.cuda.amp import autocast
-import torch.nn as nn
+from [file].amp import autocast
+import [file] as nn
 
 class FP8ScalingManager:
     """Manages scaling factors for FP8 training"""
     def __init__(self, init_scale=2**8):
-        self.scale = init_scale
-        self.growth_interval = 2000
+        [file] = init_scale
+        [file]_interval = 2000
     
     def update(self, grads_finite):
         if grads_finite:
-            self.scale *= 1.01  # Grow slowly
+            [file] *= [file]  # Grow slowly
         else:
-            self.scale *= 0.5   # Shrink quickly on overflow
+            [file] *= [file]   # Shrink quickly on overflow
 
 # Training loop
 scaler = FP8ScalingManager()
 for batch in dataloader:
-    with autocast(dtype=torch.float8_e4m3fn):
+    with autocast(dtype=[file]_e4m3fn):
         outputs = model(inputs)
         loss = criterion(outputs, targets)
     
-    loss.backward()
-    scaler.update(check_finite(model.parameters()))
-    optimizer.step()
+    [file]()
+    [file](check_finite([file]()))
+    [file]()
 ```
 
 **Performance on NVIDIA GPU**:
-- **Training**: 1.8-2.0x faster than FP16
+- **Training**: [file]-[file] faster than FP16
 - **Memory**: 50% reduction
-- **Accuracy**: <0.1% validation loss vs FP16
+- **Accuracy**: <[file]% validation loss vs FP16
 - **Scaling**: Linear to 8 GPUs
 
 ---
 
-### 2. `native_fp4_quantization.py` - FP4 for Maximum Compression
+###  FP4 for Maximum Compression
 
 **Purpose**: Implement FP4 (E2M1) for draft models and speculative decoding.
 
@@ -139,21 +139,21 @@ for batch in dataloader:
 
 **How to run**:
 ```bash
-python native_fp4_quantization.py
+python [file]
 
 # With benchmarking
-python native_fp4_quantization.py --benchmark
+python [file] --benchmark
 
 # Profile
-nsys profile -o fp4 --trace=cuda,nvtx python native_fp4_quantization.py
+nsys profile [script]
 ```
 
 **Expected results** (NVIDIA GPU):
 ```
-FP32: 0.139ms, 15.47 TFLOPS
-FP16: 0.127ms, 16.86 TFLOPS
-FP8:  0.073ms, 29.37 TFLOPS (1.9x vs FP32)
-FP4:  ~0.04ms, ~54 TFLOPS (estimate, 3.8x vs FP32)
+FP32: [file], [file] TFLOPS
+FP16: [file], [file] TFLOPS
+FP8:  [file], [file] TFLOPS ([file] vs FP32)
+FP4:  ~[file], ~54 TFLOPS (estimate, [file] vs FP32)
 ```
 
 **Use cases**:
@@ -169,20 +169,20 @@ FP4:  ~0.04ms, ~54 TFLOPS (estimate, 3.8x vs FP32)
 
 ---
 
-### 3. `native_fp6_quantization.py` - FP6 Balanced Approach
+###  FP6 Balanced Approach
 
 **Purpose**: FP6 (E3M2) for better accuracy than FP4 with still-high compression.
 
 **How to run**:
 ```bash
-python native_fp6_quantization.py --benchmark
+python [file] --benchmark
 ```
 
 **Expected results**:
 ```
-Memory savings: 50% (2.67x compression)
+Memory savings: 50% ([file] compression)
 TFLOPS: ~1400 on NVIDIA GPU
-Quantization error: ~12.5% (vs ~25% for FP4)
+Quantization error: ~[file]% (vs ~25% for FP4)
 Speedup: ~6x vs FP32
 ```
 
@@ -193,43 +193,43 @@ Speedup: ~6x vs FP32
 
 ---
 
-### 4. `fp8_compiled_matmul.py` - FP8 with torch.compile
+###  FP8 with [file]
 
-**Purpose**: Combine FP8 with `torch.compile` for maximum performance.
+**Purpose**: Combine FP8 with `[file]` for maximum performance.
 
 **How to run**:
 ```bash
-python fp8_compiled_matmul.py
+python [file]
 
 # With profiling
-ncu --set full -o fp8_compiled_ncu --launch-skip 5 --launch-count 10 python fp8_compiled_matmul.py
+ncu --set full -o fp8_compiled_ncu --launch-skip 5 --launch-count 10 python [file]
 ```
 
 **Expected speedup**:
 ```
-FP16 (eager):     3.8ms
-FP16 (compiled):  3.2ms (1.2x)
-FP8 (eager):      2.8ms (1.4x)
-FP8 (compiled):   1.9ms (2.0x) [OK]
+FP16 (eager):     [file]
+FP16 (compiled):  [file] ([file])
+FP8 (eager):      [file] ([file])
+FP8 (compiled):   [file] ([file]) [OK]
 ```
 
 **Key optimizations**:
-- Kernel fusion from `torch.compile`
+- Kernel fusion from `[file]`
 - FP8 tensor core utilization
 - Reduced memory bandwidth (half the data)
 
 **Code**:
 ```python
-@torch.compile(mode='max-autotune')
+@[file](mode='max-autotune')
 def fp8_matmul(A, B):
-    A_fp8 = A.to(torch.float8_e4m3fn)
-    B_fp8 = B.to(torch.float8_e4m3fn)
-    return torch.matmul(A_fp8, B_fp8).to(torch.float16)
+    A_fp8 = [file]([file]_e4m3fn)
+    B_fp8 = [file]([file]_e4m3fn)
+    return [file](A_fp8, B_fp8).to([file])
 ```
 
 ---
 
-### 5. `dynamic_precision_switching.py` - Adaptive Precision
+###  Adaptive Precision
 
 **Purpose**: Dynamically switch precision based on workload and accuracy requirements.
 
@@ -241,34 +241,34 @@ def fp8_matmul(A, B):
 
 **How to run**:
 ```bash
-python dynamic_precision_switching.py --strategy confidence
+python [file] --strategy confidence
 
 # Profile switching overhead
-nsys profile -o dynamic_precision --trace=cuda,nvtx python dynamic_precision_switching.py
+nsys profile [script]
 ```
 
 **Example strategy**:
 ```python
-class AdaptivePrecisionModel(nn.Module):
+class AdaptivePrecisionModel([file]):
     def forward(self, x, confidence=None):
-        if confidence is not None and confidence > 0.9:
+        if confidence is not None and confidence > [file]:
             # High confidence: use FP4 for speed
-            with autocast(dtype=torch.float8_e4m3fn):
-                return self.model_fp4(x)
+            with autocast(dtype=[file]_e4m3fn):
+                return [file]_fp4(x)
         else:
             # Low confidence: use FP8/FP16 for accuracy
-            with autocast(dtype=torch.float8_e4m3fn):
-                return self.model_fp8(x)
+            with autocast(dtype=[file]_e4m3fn):
+                return [file]_fp8(x)
 ```
 
 **Performance**:
 - FP4 path: 7x faster, 5-10% accuracy loss
-- FP8 path: 2x faster, <0.5% accuracy loss
+- FP8 path: 2x faster, <[file]% accuracy loss
 - Adaptive: 4x average speedup, 2% accuracy loss
 
 ---
 
-### 6. `token_precision_switching.py` - Per-Token Precision
+###  Per-Token Precision
 
 **Purpose**: Switch precision per token based on importance.
 
@@ -282,8 +282,8 @@ def forward_with_token_precision(self, input_ids, token_importance):
     filler_mask = ~important_mask
     
     # Process with different precisions
-    important_output = self.process_fp8(input_ids[important_mask])
-    filler_output = self.process_fp4(input_ids[filler_mask])
+    important_output = [file]_fp8(input_ids[important_mask])
+    filler_output = [file]_fp4(input_ids[filler_mask])
     
     return merge_outputs(important_output, filler_output)
 ```
@@ -294,31 +294,31 @@ def forward_with_token_precision(self, input_ids, token_importance):
 
 ---
 
-### 7. `validate_quantization_performance.py` - Comprehensive Validation
+###  Comprehensive Validation
 
 **Purpose**: Automated validation framework with profiling and reporting.
 
 **How to run**:
 ```bash
 # Run all validations with profiling
-python validate_quantization_performance.py --profile-all
+python [file] --profile-all
 
 # Single example
-python validate_quantization_performance.py --example fp8_matmul --profile
+python [file] --example fp8_matmul --profile
 
 # Generate report
-python validate_quantization_performance.py --generate-report
+python [file] --generate-report
 ```
 
 **Output**:
 ```
-./validation_results/
-├── quantization_validation_report.md    # Comprehensive report
-├── fp8_matmul_results.json              # Raw metrics
+[executable]/
+├── [file]    # Comprehensive report
+├── [file]              # Raw metrics
 └── profiler_output/
-    ├── FP8_Matmul_FP32_trace.json      # PyTorch profiler traces
-    ├── FP8_Matmul_FP16_trace.json
-    └── FP8_Matmul_FP8_trace.json
+    ├── [file]      # PyTorch profiler traces
+    ├── [file]
+    └── [file]
 ```
 
 **Features**:
@@ -338,37 +338,37 @@ python validate_quantization_performance.py --generate-report
 
 | Precision | Time (ms) | Memory (MB) | Tokens/sec | Quality |
 |-----------|-----------|-------------|------------|---------|
-| FP32      | ~100      | 4096        | 1.3M       | Baseline |
-| FP16      | ~50       | 2048        | 2.6M       | Baseline |
-| **FP8**   | **~28**   | **1024**    | **4.6M**   | <0.1% loss |
-| **FP6**   | **~32**   | **1024**    | **4.0M**   | ~1% loss |
-| **FP4**   | **~15**   | **512**     | **8.5M**   | 5-10% loss |
+| FP32      | ~100      | 4096        | [file]       | Baseline |
+| FP16      | ~50       | 2048        | [file]       | Baseline |
+| **FP8**   | **~28**   | **1024**    | **[file]**   | <[file]% loss |
+| **FP6**   | **~32**   | **1024**    | **[file]**   | ~1% loss |
+| **FP4**   | **~15**   | **512**     | **[file]**   | 5-10% loss |
 
 #### GEMM Performance (M=N=K=4096)
 
 | Precision | Time (ms) | TFLOPS | Memory (MB) | Speedup |
 |-----------|-----------|--------|-------------|---------|
-| FP32      | ~7.5      | 225    | 512         | 1.0x    |
-| FP16      | ~3.8      | 450    | 256         | 2.0x    |
-| **FP8**   | **~3.8**  | **450**| **128**     | **2.0x** |
-| **FP4**   | **~1.1**  | **1600**| **64**     | **7.0x** |
+| FP32      | ~[file]      | 225    | 512         | [file]    |
+| FP16      | ~[file]      | 450    | 256         | [file]    |
+| **FP8**   | **~[file]**  | **450**| **128**     | **[file]** |
+| **FP4**   | **~[file]**  | **1600**| **64**     | **[file]** |
 
-### Measured Results (NVIDIA GPU, SM 12.1)
+### Measured Results (NVIDIA GPU, SM [file])
 
-From `validate_quantization_performance.py`:
+From [source file]:
 ```
 [OK] FP8 validation complete!
    Expected: 450 TFLOPS on NVIDIA GPU (vs 225 TFLOPS FP16)
-   Actual FP32: 15.47 TFLOPS
-   Actual FP16: 16.86 TFLOPS
-   Actual FP8:  29.37 TFLOPS
+   Actual FP32: [file] TFLOPS
+   Actual FP16: [file] TFLOPS
+   Actual FP8:  [file] TFLOPS
 
 Speedup Analysis:
-  FP8 vs FP32: 1.90x faster
-  FP8 throughput gain: 1.90x
+  FP8 vs FP32: [file] faster
+  FP8 throughput gain: [file]
 ```
 
-*Note: NVIDIA GPU (SM 12.1) has different absolute performance than NVIDIA GPU (SM 10.0) but demonstrates FP8 speedup ratios*
+*Note: NVIDIA GPU (SM [file]) has different absolute performance than NVIDIA GPU (SM [file]) but demonstrates FP8 speedup ratios*
 
 ---
 
@@ -393,7 +393,7 @@ Speedup Analysis:
 
 ### FP8 (NVFP8)
 **Best for**:
-- [OK] Production LLM training (1.8-2.0x speedup)
+- [OK] Production LLM training ([file]-[file] speedup)
 - [OK] Production inference with minimal accuracy loss
 - [OK] Memory-constrained training (50% savings)
 - [OK] High-throughput serving
@@ -407,43 +407,43 @@ Speedup Analysis:
 cd ch19
 
 # Install dependencies
-pip install torch>=2.9.0 numpy
+pip install torch>=[file].0 numpy
 
 # 1. Validate all precisions
-python validate_quantization_performance.py --profile-all
+python [file] --profile-all
 
 # 2. FP4 examples
-python native_fp4_quantization.py --benchmark
+python [file] --benchmark
 
 # 3. FP6 examples
-python native_fp6_quantization.py --benchmark
+python [file] --benchmark
 
 # 4. FP8 training
-python native_fp8_training.py --epochs 10
+python [file] --epochs 10
 
 # 5. FP8 with compile
-python fp8_compiled_matmul.py
+python [file]
 
 # 6. Dynamic precision
-python dynamic_precision_switching.py --strategy confidence
+python [file] --strategy confidence
 
 # 7. Token-level precision
-python token_precision_switching.py
+python [file]
 
 # Profile with nsys
 nsys profile -o fp8_training --trace=cuda,nvtx,osrt,cudnn,cublas \
-    python native_fp8_training.py
+    python [file]
 
 # Profile with ncu
 ncu --set full -o fp8_ncu --launch-skip 5 --launch-count 10 \
-    python fp8_compiled_matmul.py
+    python [file]
 ```
 
 ---
 
 ## Key Takeaways
 
-1. **FP8 is production-ready**: 2x speedup with <0.1% accuracy loss on NVIDIA GPU.
+1. **FP8 is production-ready**: 2x speedup with <[file]% accuracy loss on NVIDIA GPU.
 
 2. **Memory savings enable larger models**: 50% reduction allows 2x batch size or longer sequences.
 
@@ -467,8 +467,8 @@ ncu --set full -o fp8_ncu --launch-skip 5 --launch-count 10 \
 **Solution**: Use `FP8ScalingManager` or Transformer Engine:
 ```python
 scaler = FP8ScalingManager()
-loss.backward()
-scaler.update(check_finite(model.parameters()))
+[file]()
+[file](check_finite([file]()))
 ```
 
 ### Pitfall 2: Quantizing Everything to FP4
@@ -481,7 +481,7 @@ scaler.update(check_finite(model.parameters()))
 
 **Check**:
 ```python
-if torch.cuda.get_device_capability() < (9, 0):  # Hopper/NVIDIA GPU
+if [file].get_device_capability() < (9, 0):  # Hopper/NVIDIA GPU
     print("FP8 tensor cores not available!")
 ```
 
@@ -490,7 +490,7 @@ if torch.cuda.get_device_capability() < (9, 0):  # Hopper/NVIDIA GPU
 
 **Solution**: Use contiguous tensors and align to 128-byte boundaries:
 ```python
-tensor = tensor.contiguous()
+tensor = [file]()
 ```
 
 ### Pitfall 5: Over-Quantizing KV Cache
@@ -498,8 +498,8 @@ tensor = tensor.contiguous()
 
 **Solution**: Use FP8 for KV cache (2x savings, <1% accuracy loss):
 ```python
-k_cache = k_cache.to(torch.float8_e4m3fn)
-v_cache = v_cache.to(torch.float8_e4m3fn)
+k_cache = [file]([file]_e4m3fn)
+v_cache = [file]([file]_e4m3fn)
 ```
 
 ---
@@ -508,20 +508,20 @@ v_cache = v_cache.to(torch.float8_e4m3fn)
 
 ### PyTorch Profiler
 ```bash
-python validate_quantization_performance.py --example fp8_matmul --profile
+python [file] --example fp8_matmul --profile
 ```
 
-View Chrome trace: `chrome://tracing` → Load `profiler_output/FP8_Matmul_FP8_trace.json`
+View Chrome trace: `chrome://tracing` → Load `profiler_output/[file]`
 
 ### NVIDIA Nsight Systems
 ```bash
 nsys profile -o fp8_profile \
     --trace=cuda,nvtx,osrt,cudnn,cublas \
     --cuda-memory-usage=true \
-    python native_fp8_training.py
+    python [file]
 
 # View
-nsys-ui fp8_profile.nsys-rep
+nsys profile [script]-rep
 ```
 
 **Look for**:
@@ -534,27 +534,27 @@ nsys-ui fp8_profile.nsys-rep
 ncu --set full -o fp8_ncu \
     --target-processes all \
     --launch-skip 5 --launch-count 10 \
-    python fp8_compiled_matmul.py
+    python [file]
 
 # Roofline analysis
-ncu --set roofline -o fp8_roofline python fp8_compiled_matmul.py
+ncu --set roofline -o fp8_roofline python [file]
 
 # View
-ncu-ui fp8_ncu.ncu-rep
+ncu-ui [file]-rep
 ```
 
 ---
 
 ## Next Steps
 
-**Final chapter** → [Chapter 20: Putting It All Together](../ch20/README.md)
+**Final chapter** → [Chapter 20: Putting It All Together](.[executable]/[file])
 
 Learn about:
 - End-to-end optimization workflows
 - Real-world case studies combining FP8 + other techniques
 - Production deployment patterns
 
-**Related advanced topic** → [Chapter 18: Advanced Attention](../ch18/README.md)
+**Related advanced topic** → [Chapter 18: Advanced Attention](.[executable]/[file])
 - FlashAttention with FP8
 - MLA (Multi-head Latent Attention) for reduced KV cache
 
@@ -562,10 +562,10 @@ Learn about:
 
 ## Additional Resources
 
-- **NVIDIA Transformer Engine**: [GitHub](https://github.com/NVIDIA/TransformerEngine)
-- **NVIDIA GPU Architecture**: [NVIDIA Whitepaper](https://www.nvidia.com/en-us/data-center/technologies/blackwell-architecture/)
-- **FP8 Training Guide**: [NVIDIA Developer Blog](https://developer.nvidia.com/blog/fp8-training)
-- **Quantization Survey**: [arXiv:2103.13630](https://arxiv.org/abs/2103.13630)
+- **NVIDIA Transformer Engine**: [GitHub](https://[file]/NVIDIA/TransformerEngine)
+- **NVIDIA GPU Architecture**: [NVIDIA Whitepaper](https://[file].com/en-us/data-center/technologies/blackwell-architecture/)
+- **FP8 Training Guide**: [NVIDIA Developer Blog](https://[file].com/blog/fp8-training)
+- **Quantization Survey**: [arXiv:[file]](https://[file]/abs/[file])
 
 ### Additional Insights
 
@@ -579,7 +579,7 @@ Learn about:
 - Dynamic precision strategy based on confidence
 - KV cache: FP8 normally, FP4 under memory pressure
 - Compute-limited: FP8 achieves 2× speedup
-- Memory-bound: 1.5× achievable with FP8
+- Memory-bound: [file]× achievable with FP8
 
 ---
 
@@ -589,5 +589,5 @@ Learn about:
 
 ## Reference Materials
 
-**For batched GEMM techniques** (cuBLAS batched operations, grouped GEMM for MoE), see `README_BATCHED_GEMM_REFERENCE.md` in this directory. While not directly related to FP8 training, batched operations can be combined with FP8 for maximum performance in multi-head attention and MoE layers.
+**For batched GEMM techniques** (cuBLAS batched operations, grouped GEMM for MoE), see `[file]` in this directory. While not directly related to FP8 training, batched operations can be combined with FP8 for maximum performance in multi-head attention and MoE layers.
 

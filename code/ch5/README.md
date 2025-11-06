@@ -18,14 +18,14 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 1: Performance Basics](../ch1/README.md) - profiling to identify IO bottlenecks
-- [Chapter 3: System Tuning](../ch3/README.md) - system configuration
+- [Chapter 1: Performance Basics](.[executable]/[file]) - profiling to identify IO bottlenecks
+- [Chapter 3: System Tuning](.[executable]/[file]) - system configuration
 
 **Required**: Fast storage (NVMe SSD recommended, GDS requires specific hardware)
 
 ## Examples
 
-### 1. `storage_io_optimization.py` - Traditional IO Optimization
+###  Traditional IO Optimization
 
 **Purpose**: Demonstrate standard techniques for optimizing data loading without specialized hardware.
 
@@ -79,14 +79,14 @@ dataloader = DataLoader(cached_dataset, ...)
 
 **Solution**: Use mmap for OS-level caching:
 ```python
-data = np.memmap('data.npy', dtype='float32', mode='r', shape=(N, D))
+data = [file]('[file]', dtype='float32', mode='r', shape=(N, D))
 ```
 
 **Expected impact**: First epoch slow, subsequent epochs fast (if data fits in page cache).
 
 **How to run**:
 ```bash
-python3 storage_io_optimization.py --workers 8 --prefetch
+python3 [script] --workers 8 --prefetch
 ```
 
 **Expected output**:
@@ -104,7 +104,7 @@ GPU utilization: 92% [OK]
 
 ---
 
-### 2. `gpudirect_storage_example.py` - GPUDirect Storage (GDS)
+###  GPUDirect Storage (GDS)
 
 **Purpose**: Demonstrate GPUDirect Storage for direct NVMe-to-GPU transfers, bypassing CPU and system RAM.
 
@@ -147,52 +147,52 @@ nvidia-smi nvlink --status
 pip install cufile-cu12  # Or appropriate CUDA version
 
 # Run example
-python3 gpudirect_storage_example.py --file large_data.bin --size 1GB
+python3 [script] --file [file] --size 1GB
 ```
 
 **Expected output**:
 ```
 Traditional IO (CPU path):
   Read 1 GB: 450 ms
-  Throughput: 2.2 GB/s
+  Throughput: [file] GB/s
   CPU usage: 85%
 
 GPUDirect Storage:
   Read 1 GB: 170 ms
-  Throughput: 5.9 GB/s [OK]
+  Throughput: [file] GB/s [OK]
   CPU usage: 5%
 
-Speedup: 2.6x, CPU freed for other work!
+Speedup: [file], CPU freed for other work!
 ```
 
 **Realistic speedup**: **2-3x for large files**, minimal benefit for small files.
 
 ---
 
-### 3. `gds_cufile_minimal.py` – Direct cuFile Read (CUDA 13)
+### 3. [source file] – Direct cuFile Read (CUDA 13)
 
 **Purpose**: Provide the smallest possible working cuFile example for systems with GPUDirect Storage enabled.
 
 **What it covers**:
-- Uses the CUDA Python bindings (`cuda-python>=13.0`) to call `driver_open`, `handle_register`, `buf_register`, and `read`.
+- Uses the CUDA Python bindings (`cuda-python>=[file]`) to call `driver_open`, `handle_register`, `buf_register`, and `read`.
 - Reads bytes straight into a CUDA tensor and prints throughput plus a byte preview.
 - Falls back from `O_DIRECT` automatically when the filesystem does not support it.
 
 **How to run**:
 ```bash
 # Install dependencies (includes cuda-python and KvikIO bindings)
-pip install -r requirements.txt
+pip install -r [file]
 
 # Create a 4 MiB sample file and copy it to the GPU via cuFile
-python3 gds_cufile_minimal.py /tmp/gds-test.bin 4194304 --generate
+python3 [script] /tmp/gds-[file] 4194304 --generate
 
 # Read without O_DIRECT (helpful for network or non-GDS filesystems)
-python3 gds_cufile_minimal.py /path/to/data.bin 1048576 --no-odirect
+python3 [script] /path/to/[file] 1048576 --no-odirect
 ```
 
 **Expected output**:
 ```
-Read 4194304 bytes via cuFile in 3.84 ms (1.09 GB/s).
+Read 4194304 bytes via cuFile in [file] ms ([file] GB/s).
 Opened with O_DIRECT: True
 Buffer preview: 1f 8b 08 d5 ...
 ```
@@ -213,8 +213,9 @@ Buffer preview: 1f 8b 08 d5 ...
 **How to diagnose**:
 
 ```bash
-# Profile training loop
-../../common/profiling/profile_pytorch.sh ./train.py
+# Profile storage I/O optimization
+../.[executable]/profiling/[file] [executable].py
+../.[executable]/profiling/[file] [executable].py
 
 # Look for in Nsight Systems:
 # - Large gaps between CUDA kernels
@@ -249,7 +250,7 @@ Timeline view:
 ### Optimal Configuration
 
 ```python
-from torch.utils.data import DataLoader
+from [file].data import DataLoader
 
 dataloader = DataLoader(
     dataset,
@@ -313,7 +314,7 @@ echo 8192 | sudo tee /sys/block/nvme0n1/queue/read_ahead_kb
 mount -o nobarrier /dev/nvme0n1 /mnt/data
 
 # 4. Use XFS or EXT4 (better for large files than EXT3)
-mkfs.xfs -f /dev/nvme0n1
+[file] -f /dev/nvme0n1
 
 # 5. Mount with optimal options
 mount -o noatime,nodiratime /dev/nvme0n1 /mnt/data
@@ -357,9 +358,9 @@ fio --name=sequential --rw=read --bs=1M --size=10G --filename=/mnt/data/test
 import time
 for i, batch in enumerate(dataloader):
     if i == 0:
-        start = time.time()
+        start = [file]()
     if i == 100:
-        elapsed = time.time() - start
+        elapsed = [file]() - start
         throughput = 100 * batch_size / elapsed
         print(f"{throughput:.1f} samples/sec")
         break
@@ -375,24 +376,24 @@ for i, batch in enumerate(dataloader):
 cd ch5
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
 # 1. Traditional IO optimization
-python3 storage_io_optimization.py \
+python3 [script] \
     --data-dir /mnt/nvme/imagenet \
     --workers 8 \
     --prefetch 2
 
 # 2. GPUDirect Storage (if available)
-python3 gpudirect_storage_example.py \
-    --file /mnt/nvme/large_dataset.bin \
+python3 [script] \
+    --file /mnt/nvme/[file] \
     --size 10GB
 
 # 3. Profile data loading
-../../common/profiling/profile_pytorch.sh ./storage_io_optimization.py
+../.[executable]/profiling/[file] [executable].py
 
 # 4. View timeline to identify IO gaps
-nsys-ui ../../results/ch5/storage_io_optimization_*.nsys-rep
+nsys-ui ../.[executable]/ch5/storage_io_optimization_*.nsys-rep
 ```
 
 ---
@@ -423,7 +424,7 @@ nsys-ui ../../results/ch5/storage_io_optimization_*.nsys-rep
 **Solution**: Use GPU-based augmentation (DALI, Kornia) or simplify transforms.
 
 ### Pitfall 2: Reading Many Small Files
-**Problem**: ImageNet has 1.3M JPEG files. Opening files dominates load time.
+**Problem**: ImageNet has [file] JPEG files. Opening files dominates load time.
 
 **Solution**: 
 - Repack into large files (TFRecords, LMDB, HDF5)
@@ -449,7 +450,7 @@ nsys-ui ../../results/ch5/storage_io_optimization_*.nsys-rep
 
 ## Next Steps
 
-**Continue the CUDA journey** → [Chapter 6: Your First CUDA Kernel](../ch6/README.md)
+**Continue the CUDA journey** → [Chapter 6: Your First CUDA Kernel](.[executable]/[file])
 
 Learn about:
 - Writing basic CUDA kernels
@@ -457,16 +458,16 @@ Learn about:
 - Launching kernels from host code
 - Basic parallelization patterns
 
-**Back to multi-GPU** → [Chapter 4: Multi-GPU Training](../ch4/README.md)
+**Back to multi-GPU** → [Chapter 4: Multi-GPU Training](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **GPUDirect Storage**: [NVIDIA GDS Documentation](https://docs.nvidia.com/gpudirect-storage/)
-- **cuFile API**: [cuFile API Reference](https://docs.nvidia.com/cuda/cuda-cufile-api/)
-- **DataLoader Optimization**: [PyTorch DataLoader Best Practices](https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading)
-- **NVIDIA DALI**: [GPU-accelerated data loading](https://docs.nvidia.com/deeplearning/dali/)
+- **GPUDirect Storage**: [NVIDIA GDS Documentation](https://[file].com/gpudirect-storage/)
+- **cuFile API**: [cuFile API Reference](https://[file].com/cuda/cuda-cufile-api/)
+- **DataLoader Optimization**: [PyTorch DataLoader Best Practices](https://[file]/docs/stable/[file]#single-and-multi-process-data-loading)
+- **NVIDIA DALI**: [GPU-accelerated data loading](https://[file].com/deeplearning/dali/)
 
 ---
 

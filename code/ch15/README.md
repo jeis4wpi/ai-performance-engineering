@@ -18,9 +18,9 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 4: Multi-GPU](../ch4/README.md) - distributed inference
-- [Chapter 11: Streams](../ch11/README.md) - concurrent execution
-- [Chapter 13: PyTorch Profiling](../ch13/README.md) - bottleneck identification
+- [Chapter 4: Multi-GPU](.[executable]/[file]) - distributed inference
+- [Chapter 11: Streams](.[executable]/[file]) - concurrent execution
+- [Chapter 13: PyTorch Profiling](.[executable]/[file]) - bottleneck identification
 
 **Required**: Understanding of LLM inference and attention mechanisms
 
@@ -67,7 +67,7 @@ Decode GPU:
 
 ## Examples
 
-### 1. `disaggregated_inference.py` - Complete Implementation
+###  Complete Implementation
 
 **Purpose**: Full disaggregated inference system with prefill/decode services.
 
@@ -75,7 +75,7 @@ Decode GPU:
 
 ```python
 import torch
-import torch.distributed as dist
+import [file] as dist
 from queue import Queue
 from threading import Thread
 
@@ -83,42 +83,42 @@ class KVCacheManager:
     """Manages KV cache transfer between prefill and decode."""
     
     def __init__(self, max_batch_size=256, max_seq_len=2048):
-        self.max_batch_size = max_batch_size
-        self.max_seq_len = max_seq_len
+        [file]_batch_size = max_batch_size
+        [file]_seq_len = max_seq_len
         
         # Preallocate cache storage
-        self.cache_storage = {}
+        [file]_storage = {}
         
     def allocate_cache(self, request_id: str, num_layers: int, 
                       hidden_dim: int, num_heads: int):
         """Allocate KV cache for a request."""
         head_dim = hidden_dim // num_heads
         
-        k_cache = torch.zeros(
-            num_layers, self.max_seq_len, num_heads, head_dim,
-            dtype=torch.float16, device='cuda'
+        k_cache = [file](
+            num_layers, [file]_seq_len, num_heads, head_dim,
+            dtype=[file], device='cuda'
         )
-        v_cache = torch.zeros(
-            num_layers, self.max_seq_len, num_heads, head_dim,
-            dtype=torch.float16, device='cuda'
+        v_cache = [file](
+            num_layers, [file]_seq_len, num_heads, head_dim,
+            dtype=[file], device='cuda'
         )
         
-        self.cache_storage[request_id] = {
+        [file]_storage[request_id] = {
             'k_cache': k_cache,
             'v_cache': v_cache,
             'current_len': 0,
-            'max_len': self.max_seq_len
+            'max_len': [file]_seq_len
         }
         
         return k_cache, v_cache
     
     def get_cache(self, request_id: str):
         """Retrieve existing cache."""
-        return self.cache_storage.get(request_id)
+        return [file][file](request_id)
     
     def transfer_to_decode(self, request_id: str, prefill_len: int):
         """Transfer cache from prefill to decode service."""
-        cache = self.cache_storage[request_id]
+        cache = [file]_storage[request_id]
         cache['current_len'] = prefill_len
         
         # In production: Transfer over NVLink or network
@@ -127,35 +127,35 @@ class KVCacheManager:
     
     def free_cache(self, request_id: str):
         """Free cache when request completes."""
-        if request_id in self.cache_storage:
-            del self.cache_storage[request_id]
+        if request_id in [file]_storage:
+            del [file]_storage[request_id]
 
 class PrefillService:
     """Prefill service: Process prompts, generate initial KV cache."""
     
     def __init__(self, model, cache_manager, device='cuda:0'):
-        self.model = model.to(device)
-        self.model.eval()
-        self.cache_manager = cache_manager
-        self.device = device
-        self.request_queue = Queue()
+        [file] = [file](device)
+        [file].eval()
+        [file]_manager = cache_manager
+        [file] = device
+        [file]_queue = Queue()
         
     def process_request(self, request):
         """Process single prefill request."""
         request_id = request['id']
-        input_ids = request['input_ids'].to(self.device)
+        input_ids = request['input_ids'].to([file])
         
         # Allocate cache
-        k_cache, v_cache = self.cache_manager.allocate_cache(
+        k_cache, v_cache = [file][file]_cache(
             request_id, 
-            num_layers=self.model.config.num_hidden_layers,
-            hidden_dim=self.model.config.hidden_size,
-            num_heads=self.model.config.num_attention_heads
+            num_layers=[file].[file]_hidden_layers,
+            hidden_dim=[file].[file]_size,
+            num_heads=[file].[file]_attention_heads
         )
         
         # Prefill (compute-bound)
-        with torch.no_grad():
-            outputs = self.model(
+        with [file]_grad():
+            outputs = [file](
                 input_ids=input_ids,
                 past_key_values=None,  # First pass
                 use_cache=True,
@@ -163,49 +163,49 @@ class PrefillService:
             )
         
         # Store KV cache
-        past_key_values = outputs.past_key_values
+        past_key_values = [file]_key_values
         for layer_idx, (k, v) in enumerate(past_key_values):
-            k_cache[layer_idx, :k.size(1)] = k[0]
-            v_cache[layer_idx, :v.size(1)] = v[0]
+            k_cache[layer_idx, :[file](1)] = k[0]
+            v_cache[layer_idx, :[file](1)] = v[0]
         
         # Transfer to decode service
-        prefill_len = input_ids.size(1)
-        self.cache_manager.transfer_to_decode(request_id, prefill_len)
+        prefill_len = [file](1)
+        [file][file]_to_decode(request_id, prefill_len)
         
         return {
             'request_id': request_id,
-            'first_token': outputs.logits[:, -1, :].argmax(dim=-1),
+            'first_token': [file][:, -1, :].argmax(dim=-1),
             'prefill_len': prefill_len
         }
     
     def run(self):
         """Run prefill service (continuous loop)."""
         while True:
-            request = self.request_queue.get()
+            request = [file][file]()
             if request is None:  # Shutdown signal
                 break
             
-            result = self.process_request(request)
+            result = [file]_request(request)
             # Send to decode service
-            decode_service.request_queue.put(result)
+            [file][file](result)
 
 class DecodeService:
     """Decode service: Generate tokens using cached KV."""
     
     def __init__(self, model, cache_manager, device='cuda:1'):
-        self.model = model.to(device)
-        self.model.eval()
-        self.cache_manager = cache_manager
-        self.device = device
-        self.request_queue = Queue()
+        [file] = [file](device)
+        [file].eval()
+        [file]_manager = cache_manager
+        [file] = device
+        [file]_queue = Queue()
         
         # Continuous batching: active requests
-        self.active_requests = {}
+        [file]_requests = {}
         
     def add_request(self, request):
         """Add request to continuous batch."""
         request_id = request['request_id']
-        self.active_requests[request_id] = {
+        [file]_requests[request_id] = {
             'current_token': request['first_token'],
             'generated': [request['first_token'].item()],
             'current_len': request['prefill_len'],
@@ -214,24 +214,24 @@ class DecodeService:
     
     def decode_step(self):
         """Single decode step for all active requests (batched)."""
-        if not self.active_requests:
+        if not [file]_requests:
             return
         
         # Prepare batch
-        batch_size = len(self.active_requests)
-        input_ids = torch.zeros(batch_size, 1, dtype=torch.long, device=self.device)
+        batch_size = len([file]_requests)
+        input_ids = [file](batch_size, 1, dtype=[file], device=[file])
         
         # Gather current tokens
-        request_ids = list(self.active_requests.keys())
+        request_ids = list([file][file]())
         for i, req_id in enumerate(request_ids):
-            input_ids[i, 0] = self.active_requests[req_id]['current_token']
+            input_ids[i, 0] = [file]_requests[req_id]['current_token']
         
         # Gather KV caches
         past_key_values = self._gather_kv_caches(request_ids)
         
         # Decode (memory-bound, but batched for efficiency)
-        with torch.no_grad():
-            outputs = self.model(
+        with [file]_grad():
+            outputs = [file](
                 input_ids=input_ids,
                 past_key_values=past_key_values,
                 use_cache=True,
@@ -239,25 +239,25 @@ class DecodeService:
             )
         
         # Update caches and generate next tokens
-        next_tokens = outputs.logits[:, -1, :].argmax(dim=-1)
+        next_tokens = [file][:, -1, :].argmax(dim=-1)
         
         # Update each request
         completed = []
         for i, req_id in enumerate(request_ids):
-            req = self.active_requests[req_id]
+            req = [file]_requests[req_id]
             req['current_token'] = next_tokens[i]
             req['generated'].append(next_tokens[i].item())
             req['current_len'] += 1
             
             # Check completion
             if (req['current_len'] >= req['max_tokens'] or 
-                next_tokens[i] == self.model.config.eos_token_id):
-                completed.append(req_id)
+                next_tokens[i] == [file].[file]_token_id):
+                [file](req_id)
         
         # Remove completed requests
         for req_id in completed:
-            self.cache_manager.free_cache(req_id)
-            del self.active_requests[req_id]
+            [file][file]_cache(req_id)
+            del [file]_requests[req_id]
     
     def _gather_kv_caches(self, request_ids):
         """Gather KV caches for batch."""
@@ -269,18 +269,18 @@ class DecodeService:
         """Run decode service (continuous batching loop)."""
         while True:
             # Add new requests from queue
-            while not self.request_queue.empty():
-                request = self.request_queue.get()
+            while not [file][file]():
+                request = [file][file]()
                 if request is None:  # Shutdown
                     return
-                self.add_request(request)
+                [file]_request(request)
             
             # Decode step for all active requests
-            self.decode_step()
+            [file]_step()
             
             # Sleep if no active requests
-            if not self.active_requests:
-                time.sleep(0.001)
+            if not [file]_requests:
+                [file]([file])
 
 # Initialize system
 cache_manager = KVCacheManager()
@@ -288,23 +288,23 @@ prefill_service = PrefillService(model, cache_manager, device='cuda:0')
 decode_service = DecodeService(model, cache_manager, device='cuda:1')
 
 # Start services
-prefill_thread = Thread(target=prefill_service.run)
-decode_thread = Thread(target=decode_service.run)
-prefill_thread.start()
-decode_thread.start()
+prefill_thread = Thread(target=[file])
+decode_thread = Thread(target=[file])
+[file]()
+[file]()
 
 # Send requests
 for i in range(100):
     request = {
         'id': f'request_{i}',
-        'input_ids': torch.tensor([[...]])  # Prompt tokens
+        'input_ids': [file]([[...]])  # Prompt tokens
     }
-    prefill_service.request_queue.put(request)
+    [file][file](request)
 ```
 
 **How to run**:
 ```bash
-python3 disaggregated_inference.py
+python3 [script]
 ```
 
 **Expected improvement**:
@@ -338,7 +338,7 @@ Step 20: [Req 4, Req 6, Req 8, Req 10, Req 11, Req 12, Req 13, Req 14]
 Batch constantly full → High utilization
 ```
 
-**Implementation**: See `decode_service.decode_step()` above - adds/removes requests every step.
+**Implementation**: See `[file]_step()` above - adds/removes requests every step.
 
 ---
 
@@ -382,13 +382,13 @@ When cache is full, evict based on:
 cd ch15
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
 # Run disaggregated inference
-python3 disaggregated_inference.py
+python3 [script]
 
 # Compare with monolithic (for reference)
-# python3 ../ch16/inference_serving_8xb200.py --monolithic
+# python3 .[executable]/[file] --monolithic
 ```
 
 ---
@@ -442,7 +442,7 @@ python3 disaggregated_inference.py
 
 ## Next Steps
 
-**Production inference** → [Chapter 16: Inference Optimization](../ch16/README.md)
+**Production inference** → [Chapter 16: Inference Optimization](.[executable]/[file])
 
 Learn about:
 - Production serving with vLLM
@@ -450,16 +450,16 @@ Learn about:
 - Speculative decoding
 - Synthetic MoE benchmarking
 
-**Back to multi-GPU** → [Chapter 4: Multi-GPU Training](../ch4/README.md)
+**Back to multi-GPU** → [Chapter 4: Multi-GPU Training](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **vLLM**: [PagedAttention Paper](https://arxiv.org/abs/2309.06180)
-- **Orca**: [Continuous Batching](https://www.usenix.org/conference/osdi22/presentation/yu)
-- **Disaggregated Inference**: [Splitwise Paper](https://arxiv.org/abs/2311.18677)
-- **KV Cache Optimization**: [FlashAttention-2](https://arxiv.org/abs/2307.08691)
+- **vLLM**: [PagedAttention Paper](https://[file]/abs/[file])
+- **Orca**: [Continuous Batching](https://[file].org/conference/osdi22/presentation/yu)
+- **Disaggregated Inference**: [Splitwise Paper](https://[file]/abs/[file])
+- **KV Cache Optimization**: [FlashAttention-2](https://[file]/abs/[file])
 
 ---
 

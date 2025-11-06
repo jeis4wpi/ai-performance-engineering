@@ -44,7 +44,7 @@ Run the quick smoke tests after installation:
    ```bash
    nvidia-smi
    ```
-   Expect eight B200 GPUs and driver 580+.
+   Expect at least 1 Blackwell GPU and driver 580+.
 2. Verify benchmarks can load (syntax + import check):
    ```bash
    python3 tools/verification/verify_all_benchmarks.py

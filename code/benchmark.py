@@ -77,7 +77,7 @@ def ensure_peak_benchmarks_exist():
                 [sys.executable, str(benchmark_peak_script), "--output-dir", str(repo_root)],
                 cwd=str(repo_root),
                 capture_output=False,
-                timeout=300  # 5 minute timeout
+                timeout=15  # 15 second timeout to prevent hangs
             )
             if result.returncode == 0:
                 print("\nPeak performance benchmarks completed successfully")

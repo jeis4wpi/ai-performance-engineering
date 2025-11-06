@@ -20,7 +20,7 @@ def run_coverage_check(script_path: Path) -> Tuple[int, str]:
             [sys.executable, str(script_path)],
             capture_output=True,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=15  # 15 second timeout to prevent hangs
         )
         return result.returncode, result.stdout + result.stderr
     except subprocess.TimeoutExpired:

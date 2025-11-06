@@ -2,7 +2,7 @@
 
 ## Overview
 
-Understanding your hardware is critical for effective optimization. This chapter provides deep insight into NVIDIA GPU architecture, helping you make informed decisions about which optimizations have the biggest impact. Learn about the memory hierarchy, NVLink interconnect, and CPU-GPU coherency models.
+Understanding your hardware is critical for effective optimization. This chapter provides deep insight into NVIDIA GPU architecture, helping you make decisions about which optimizations have the biggest impact. Learn about the memory hierarchy, NVLink interconnect, and CPU-GPU coherency models.
 
 ## Learning Objectives
 
@@ -16,13 +16,13 @@ After completing this chapter, you can:
 
 ## Prerequisites
 
-**Previous chapters**: [Chapter 1: Performance Basics](../ch1/README.md) - profiling fundamentals
+**Previous chapters**: [Chapter 1: Performance Basics](.[executable]/[file]) - profiling fundamentals
 
 **Hardware**: 8x NVIDIA GPU or NVIDIA GPUs (examples adaptable to other architectures)
 
 ## Examples
 
-### 1. `hardware_info.py` - GPU Introspection
+###  GPU Introspection
 
 **Purpose**: Programmatically query and display GPU specifications.
 
@@ -34,13 +34,13 @@ After completing this chapter, you can:
 
 **How to run**:
 ```bash
-python3 hardware_info.py
+python3 [script]
 ```
 
 **Expected output (NVIDIA GPU)**:
 ```
 GPU 0: NVIDIA GPU
-  Compute Capability: 10.0  (NVIDIA GPU)
+  Compute Capability: [file]  (NVIDIA GPU)
   SMs: 148
   Global Memory: 180 GB (HBM3e)
   Memory Bandwidth: 8 TB/s (theoretical)
@@ -55,7 +55,7 @@ GPU 0: NVIDIA GPU
 
 ---
 
-### 2. `nvlink_c2c_p2p_blackwell.cu` - NVLink Bandwidth Test
+### 2. NVLink Bandwidth Test
 
 **Purpose**: Measure peer-to-peer (P2P) bandwidth between GPUs via NVLink.
 
@@ -67,7 +67,6 @@ GPU 0: NVIDIA GPU
 **How to run**:
 ```bash
 make
-./nvlink_c2c_p2p_blackwell
 ```
 
 **Expected output**:
@@ -78,15 +77,15 @@ Bidirectional (simultaneous):     450 GB/s
 ```
 
 **Performance targets (NVIDIA GPU)**:
-- **NVLink 5.0**: 250+ GB/s unidirectional per link
+- **NVLink [file]**: 250+ GB/s unidirectional per link
 - **Bidirectional**: 450+ GB/s (with proper overlap)
-- **AllReduce (NCCL)**: 273.5 GB/s measured (excellent!)
+- **AllReduce (NCCL)**: [file] GB/s measured (excellent!)
 
 **Why this matters**: Multi-GPU training/inference depends on fast GPU-to-GPU communication. NVLink is 10x+ faster than PCIe.
 
 ---
 
-### 3. `gb200_grace_blackwell_coherency.cu` - CPU-GPU Coherency
+###  CPU-GPU Coherency
 
 **Purpose**: Demonstrate cache-coherent memory access between Grace CPU and NVIDIA GPU.
 
@@ -98,7 +97,7 @@ Bidirectional (simultaneous):     450 GB/s
 **How to run** (NVIDIA GPU only):
 ```bash
 make
-./gb200_coherency
+[executable]
 ```
 
 **Expected behavior**:
@@ -109,7 +108,7 @@ make
 
 ---
 
-### 4. `cpu_gpu_topology_aware.py` - CPU-GPU Topology
+###  CPU-GPU Topology
 
 **Purpose**: Query and display CPU-GPU topology for any system architecture (NVIDIA GPU, NVIDIA GPU, GH200, etc.).
 
@@ -121,7 +120,7 @@ make
 
 **How to run**:
 ```bash
-python3 cpu_gpu_topology_aware.py
+python3 [script]
 ```
 
 **Expected output**:
@@ -142,7 +141,7 @@ GPU Topology:
 
 | Component | Specification | Notes |
 |-----------|--------------|-------|
-| Architecture | NVIDIA GPU (modern compute capability) | 10.0 compute capability |
+| Architecture | NVIDIA GPU (modern compute capability) | [file] compute capability |
 | SMs | 148 | ~19,000 CUDA cores |
 | Memory | 180 GB HBM3e | NOT 192 GB! |
 | Memory Bandwidth | 8 TB/s | Theoretical; 30-40% achievable |
@@ -195,21 +194,21 @@ Use the common profiling tools:
 
 ```bash
 # Check GPU specs
-python3 hardware_info.py
+python3 [script]
 
 # Benchmark NVLink
 make
-./nvlink_c2c_p2p_blackwell
+# Run compiled binaries (architecture suffix added automatically)
 
 # Verify NVLink with NCCL (Chapter 4)
-python3 ../ch4/nccl_benchmark.py
+python3 .[executable]/[file]
 ```
 
 ### Expected Baselines (NVIDIA GPU)
 
 | Metric | Target | Typical Achievable | Excellent |
 |--------|--------|-------------------|-----------|
-| HBM3e Bandwidth | 8 TB/s | 2.7 TB/s (34%) | 40% |
+| HBM3e Bandwidth | 8 TB/s | [file] TB/s (34%) | 40% |
 | FP16 Compute | 2000 TFLOPS | 1000 TFLOPS (50%) | 65% |
 | NVLink P2P | 250 GB/s | 230 GB/s (92%) | 95% |
 | NVLink AllReduce | N/A | 273 GB/s | Validated [OK] |
@@ -224,22 +223,22 @@ python3 ../ch4/nccl_benchmark.py
 cd ch2
 
 # Install Python dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
 # Query GPU info
-python3 hardware_info.py
+python3 [script]
 
 # Build CUDA examples
 make
 
 # Test NVLink bandwidth
-./nvlink_c2c_p2p_blackwell
+# Run compiled binaries (architecture suffix added automatically)
 
-# NVIDIA GPU only: Test coherency
-./gb200_coherency  # Only on NVIDIA GPU systems
+# NVIDIA GPU only: Test coherency  
+# Run compiled binaries (architecture suffix added automatically)
 
 # Check topology (works with any CPU-GPU architecture)
-python3 cpu_gpu_topology_aware.py
+python3 [script]
 ```
 
 ---
@@ -286,22 +285,22 @@ python3 cpu_gpu_topology_aware.py
 
 ## Next Steps
 
-**Continue the journey** → [Chapter 3: System Tuning](../ch3/README.md)
+**Continue the journey** → [Chapter 3: System Tuning](.[executable]/[file])
 
 Learn about:
 - NUMA binding for optimal CPU-GPU affinity
 - System-level tuning for NVIDIA GPU
 - Docker/Kubernetes GPU configuration
 
-**Skip ahead to multi-GPU?** → [Chapter 4: Multi-GPU Training](../ch4/README.md)
+**Skip ahead to multi-GPU?** → [Chapter 4: Multi-GPU Training](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **NVIDIA GPU Architecture**: [NVIDIA GPU Whitepaper](https://www.nvidia.com/en-us/data-center/technologies/blackwell-architecture/)
-- **NVLink Documentation**: [NVLink and NVSwitch](https://www.nvidia.com/en-us/data-center/nvlink/)
-- **CPU-GPU**: [NVIDIA GPU Superchip](https://www.nvidia.com/en-us/data-center/grace-blackwell-superchip/)
+- **NVIDIA GPU Architecture**: [NVIDIA GPU Whitepaper](https://[file].com/en-us/data-center/technologies/blackwell-architecture/)
+- **NVLink Documentation**: [NVLink and NVSwitch](https://[file].com/en-us/data-center/nvlink/)
+- **CPU-GPU**: [NVIDIA GPU Superchip](https://[file].com/en-us/data-center/grace-blackwell-superchip/)
 
 ---
 

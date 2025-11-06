@@ -18,8 +18,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 11: CUDA Streams](../ch11/README.md) - async execution model
-- [Chapter 6: CUDA Basics](../ch6/README.md) - kernel launches
+- [Chapter 11: CUDA Streams](.[executable]/[file]) - async execution model
+- [Chapter 6: CUDA Basics](.[executable]/[file]) - kernel launches
 
 **Required**: Understanding of kernel launch mechanics and async operations
 
@@ -60,7 +60,8 @@ cudaGraphLaunch(instance, stream);
 
 ## Examples
 
-### 1. `cuda_graphs.cu` - Basic Graph Capture and Replay
+### 1. Basic Graph Capture and Replay
+
 
 **Purpose**: Demonstrate fundamental graph operations.
 
@@ -81,10 +82,10 @@ cudaGraphAddMemcpyNode(&memcpy_node, graph, NULL, 0, &memcpy_params);
 
 // Kernel node
 cudaKernelNodeParams kernel_params = {0};
-kernel_params.func = (void*)my_kernel;
-kernel_params.gridDim = dim3(blocks);
-kernel_params.blockDim = dim3(threads);
-kernel_params.kernelParams = args;
+[file] = (void*)my_kernel;
+[file] = dim3(blocks);
+[file] = dim3(threads);
+[file] = args;
 cudaGraphAddKernelNode(&kernel_node, graph, &memcpy_node, 1, &kernel_params);
 
 // Instantiate and launch
@@ -124,20 +125,20 @@ for (int i = 0; i < 1000; i++) {
 
 **How to run**:
 ```bash
-make cuda_graphs
-./cuda_graphs_sm100
+make
 ```
 
 **Expected output**:
 ```
-Traditional launches (1000 kernels): 18.2 ms
-CUDA Graph replay (1000 kernels): 1.1 ms
-Speedup: 16.5x [OK]
+Traditional launches (1000 kernels): [file] ms
+CUDA Graph replay (1000 kernels): [file] ms
+Speedup: [file] [OK]
 ```
 
 ---
 
-### 2. `cuda_graphs_conditional.cu` and `cuda_graphs_conditional_enhanced.cu` – Conditional Graphs
+### 2. Conditional Graphs
+
 
 **Purpose**: Demonstrate conditional graph nodes for dynamic execution paths.
 
@@ -150,13 +151,13 @@ Conditional graphs allow runtime decisions within a captured CUDA graph, enablin
 
 **How to run**:
 ```bash
-make cuda_graphs_conditional
-./cuda_graphs_conditional_sm100
+make
 ```
 
 ---
 
-### 3. `dynamic_parallelism.cu` - Device-Side Kernel Launches
+### 3. Device-Side Kernel Launches
+
 
 **Purpose**: Enable kernels to launch other kernels, adapting to data.
 
@@ -197,13 +198,13 @@ traverse_tree_adaptive<<<1, 32>>>(root, 0);
 
 **How to run**:
 ```bash
-make dynamic_parallelism
-./dynamic_parallelism_sm100
+make
 ```
 
 ---
 
-### 4. `dp_device_launched.cu` vs `dp_host_launched.cu` - Comparison
+### 4. Host-Launched vs Device-Launched Comparison
+
 
 #### Host-Launched (Traditional)
 
@@ -243,20 +244,19 @@ __global__ void traverse_tree_device(TreeNode* node, int depth) {
 
 **How to run**:
 ```bash
-make dp_device_launched dp_host_launched
-./dp_host_launched_sm100      # Baseline (CPU involvement)
-./dp_device_launched_sm100    # Optimized (GPU-only)
+make dp_host_launched
 ```
 
 ---
 
-### 5. `uneven_static.cu` → `uneven_dynamic.cu` - Load Balancing
+### 5. Load Balancing
+
 
 #### Static Workload (Baseline)
 
 ```cpp
 __global__ void process_static(int* work, int* output, int n) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int idx = [file] * [file] + [file];
     if (idx < n) {
         // Fixed work per thread
         output[idx] = expensive_computation(work[idx]);
@@ -290,14 +290,13 @@ __global__ void process_dynamic(WorkQueue* queue, int* output) {
 
 **How to run**:
 ```bash
-make uneven_static uneven_dynamic
-./uneven_static_sm100
-./uneven_dynamic_sm100
+make uneven_dynamic
 ```
 
 ---
 
-### 6. `atomic_work_queue.cu` - Device-Side Work Queue
+### 6. Device-Side Work Queue
+
 
 **Purpose**: Implement work-stealing queue for dynamic parallelism.
 
@@ -321,7 +320,7 @@ struct WorkQueue {
 };
 
 __global__ void work_stealing_kernel(WorkQueue* queue, int* output) {
-    int tid = threadIdx.x;
+    int tid = [file];
     
     while (true) {
         int work = queue->dequeue();
@@ -343,8 +342,7 @@ __global__ void work_stealing_kernel(WorkQueue* queue, int* output) {
 
 **How to run**:
 ```bash
-make atomic_work_queue
-./atomic_work_queue_sm100
+make
 ```
 
 ---
@@ -364,7 +362,7 @@ cudaGraphLaunch(instance, stream);
 
 // Update kernel parameters (no re-instantiation!)
 cudaKernelNodeParams new_params;
-new_params.kernelParams[0] = &new_data;  // New pointer
+[file][0] = &new_data;  // New pointer
 cudaGraphExecKernelNodeSetParams(instance, kernel_node, &new_params);
 
 // Launch with updated parameters
@@ -409,21 +407,21 @@ Does workload repeat exactly?
 
 ## Baseline/Optimized Example Pairs
 
-All CUDA examples follow the `baseline_*.cu` / `optimized_*.cu` pattern:
+All CUDA examples follow the [source file] / [source file] pattern:
 
 ### Available Pairs
 
-1. **Kernel Fusion** (`baseline_kernel_fusion.cu` / `optimized_kernel_fusion.cu`)
+1. **Kernel Fusion** ([source file] / [source file])
    - Separate kernels vs fused kernel using CUDA graphs
    - Demonstrates launch overhead reduction through fusion
 
-2. **Graph Bandwidth** (`baseline_graph_bandwidth.cu` / `optimized_graph_bandwidth.cu`)
+2. **Graph Bandwidth** ([source file] / [source file])
    - Separate kernel launches vs CUDA graph execution
    - Measures bandwidth improvements from graph capture
 
 **Run comparisons:**
 ```bash
-python3 compare.py  # Compares all baseline/optimized pairs (via Python wrappers)
+python3 [script]  # Compares all baseline/optimized pairs (via Python wrappers)
 ```
 
 ---
@@ -437,27 +435,15 @@ cd ch12
 make
 
 # Basic graphs
-./cuda_graphs_sm100                    # Capture and replay
-./cuda_graphs_conditional_sm100        # Conditional execution
 
 # Baseline/Optimized pairs
-./baseline_kernel_fusion_sm100          # Separate kernels
-./optimized_kernel_fusion_sm100        # Fused kernel
-./baseline_graph_bandwidth_sm100       # Separate launches
-./optimized_graph_bandwidth_sm100      # Graph execution
 
 # Dynamic parallelism
-./dynamic_parallelism_sm100            # Recursive kernels
-./dp_device_launched_sm100             # Device-side launch
-./dp_host_launched_sm100               # Host-side launch (baseline)
 
 # Load balancing
-./uneven_static_sm100                  # Static workload
-./uneven_dynamic_sm100                 # Dynamic adaptation
-./atomic_work_queue_sm100              # Work stealing
 
 # Profile to see launch overhead reduction
-../../common/profiling/profile_cuda.sh ./optimized_kernel_fusion baseline
+../.[executable]/profiling/[file] [executable] baseline
 ```
 
 ---
@@ -511,7 +497,7 @@ make
 
 ## Next Steps
 
-**PyTorch profiling and optimization** → [Chapter 13: PyTorch Profiling](../ch13/README.md)
+**PyTorch profiling and optimization** → [Chapter 13: PyTorch Profiling](.[executable]/[file])
 
 Learn about:
 - PyTorch profiler for bottleneck identification
@@ -519,16 +505,16 @@ Learn about:
 - FSDP (Fully Sharded Data Parallel)
 - Custom autograd functions
 
-**Back to streams** → [Chapter 11: CUDA Streams](../ch11/README.md)
+**Back to streams** → [Chapter 11: CUDA Streams](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **CUDA Graphs**: [Programming Guide - Graphs](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-graphs)
-- **Dynamic Parallelism**: [Programming Guide - Dynamic Parallelism](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-dynamic-parallelism)
-- **Conditional Graphs**: [CUDA 12.4+ Feature](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#conditional-graph-nodes)
-- **Graph Best Practices**: [CUDA Best Practices - Graphs](https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html#cuda-graphs)
+- **CUDA Graphs**: [Programming Guide - Graphs](https://[file].com/cuda/cuda-c-programming-guide/[file]#cuda-graphs)
+- **Dynamic Parallelism**: [Programming Guide - Dynamic Parallelism](https://[file].com/cuda/cuda-c-programming-guide/[file]#cuda-dynamic-parallelism)
+- **Conditional Graphs**: [CUDA [file]+ Feature](https://[file].com/cuda/cuda-c-programming-guide/[file]#conditional-graph-nodes)
+- **Graph Best Practices**: [CUDA Best Practices - Graphs](https://[file].com/cuda/cuda-c-best-practices-guide/[file]#cuda-graphs)
 
 ---
 

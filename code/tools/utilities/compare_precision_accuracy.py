@@ -43,7 +43,7 @@ def run_perplexity_eval(
             cmd,
             capture_output=True,
             text=True,
-            timeout=600
+            timeout=15  # 15 second timeout to prevent hangs
         )
         
         if result.returncode != 0:

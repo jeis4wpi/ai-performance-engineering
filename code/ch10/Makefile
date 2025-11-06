@@ -16,7 +16,7 @@ BASE_TARGETS = baseline_cluster_group optimized_cluster_group \
 
 TARGETS = $(addsuffix $(SUFFIX), $(BASE_TARGETS))
 
-.PHONY: all clean test compare blackwell grace-blackwell profile-nsys profile-ncu profile-hta profile-perf profile-all $(TARGETS) run test-gds demo help
+.PHONY: all clean test compare b200 gb10 b300 gb300 profile-nsys profile-ncu profile-hta profile-perf profile-all $(TARGETS) run test-gds demo help
 
 all: $(TARGETS)
 	@echo "Building all Chapter 10 examples with $(ARCH) (CUDA $(CUDA_VERSION))"
@@ -78,11 +78,17 @@ compare: clean
 		$(MAKE) ARCH=$${arch} all; \
 	done
 
-blackwell: ARCH=sm_100
-blackwell: clean all
+b200: ARCH=sm_100
+b200: clean all
 
-grace-blackwell: ARCH=sm_121
-grace-blackwell: clean all
+gb10: ARCH=sm_121
+gb10: clean all
+
+b300: ARCH=sm_103
+b300: clean all
+
+gb300: ARCH=sm_103
+gb300: clean all
 
 profile-nsys: all
 	@echo "Nsight Systems timeline profiling..."
@@ -138,8 +144,10 @@ help:
 	@echo "  make help           - Show this help message"
 	@echo ""
 	@echo "Architecture targets:"
-	@echo "  make blackwell      - Build for Blackwell (sm_100)"
-	@echo "  make grace-blackwell- Build for Grace-Blackwell (sm_121)"
+	@echo "  make b200           - Build for B200 (sm_100)"
+	@echo "  make gb10           - Build for GB10 (sm_121)"
+	@echo "  make b300           - Build for B300 (sm_103)"
+	@echo "  make gb300          - Build for GB300 (sm_103)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  Memory Pipeline:       ./baseline_double_buffered_pipeline$(SUFFIX) 512 512 512"

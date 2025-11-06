@@ -1,0 +1,44 @@
+"""Python harness wrapper for baseline_cluster_group.cu."""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+repo_root = Path(__file__).parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
+from common.python.benchmark_harness import BenchmarkHarness, BenchmarkMode
+from common.python.cuda_binary_benchmark import CudaBinaryBenchmark
+
+
+class BaselineClusterGroupBenchmark(CudaBinaryBenchmark):
+    """Wraps the baseline cooperative group example without clusters."""
+
+    def __init__(self) -> None:
+        chapter_dir = Path(__file__).parent
+        super().__init__(
+            chapter_dir=chapter_dir,
+            binary_name="baseline_cluster_group",
+            friendly_name="Baseline Cluster Group",
+            iterations=3,
+            warmup=1,
+            timeout_seconds=180,
+        )
+
+
+def get_benchmark() -> BaselineClusterGroupBenchmark:
+    """Factory for discover_benchmarks()."""
+    return BaselineClusterGroupBenchmark()
+
+
+if __name__ == "__main__":
+    benchmark = get_benchmark()
+    harness = BenchmarkHarness(
+        mode=BenchmarkMode.CUSTOM,
+        config=benchmark.get_config(),
+    )
+    result = harness.benchmark(benchmark)
+    print(f"\nBaseline Cluster Group: {result.mean_ms:.3f} ms")
+

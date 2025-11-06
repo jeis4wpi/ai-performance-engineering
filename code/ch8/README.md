@@ -18,8 +18,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 6: CUDA Basics](../ch6/README.md) - thread hierarchy
-- [Chapter 7: Memory Access](../ch7/README.md) - memory patterns
+- [Chapter 6: CUDA Basics](.[executable]/README.md) - thread hierarchy
+- [Chapter 7: Memory Access](.[executable]/README.md) - memory patterns
 
 **Required**: Understanding of GPU execution model and latency
 
@@ -52,7 +52,7 @@ Occupancy = Active_Warps_Per_SM / Maximum_Warps_Per_SM
 
 ## Examples
 
-### 1. `occupancy_tuning.cu` - Finding Optimal Configuration
+###  Finding Optimal Configuration
 
 **Purpose**: Demonstrate how to find the sweet spot between occupancy and per-thread resources.
 
@@ -102,7 +102,6 @@ __global__ void highResourceKernel(float* data, int n) {
 **How to run**:
 ```bash
 make occupancy_tuning
-./occupancy_tuning_sm100
 ```
 
 **Expected output**:
@@ -120,7 +119,7 @@ Conclusion: Higher performance despite lower occupancy!
 
 ---
 
-### 2. `loop_unrolling.cu` - ILP Through Unrolling
+### 2. `[CUDA file]` (see source files for implementation) - ILP Through Unrolling
 
 **Purpose**: Show how loop unrolling increases ILP and hides latency.
 
@@ -165,7 +164,6 @@ __global__ void sumUnroll4(const float* data, float* result, int n) {
 **How to run**:
 ```bash
 make loop_unrolling
-./loop_unrolling_sm100
 ```
 
 **Expected speedup**: **3-4x** (from ~350 GB/s to ~1.2 TB/s)
@@ -177,7 +175,7 @@ make loop_unrolling
 
 ---
 
-### 3. `independent_ops.cu` - Maximizing ILP
+###  Maximizing ILP
 
 **Purpose**: Demonstrate independent operations for latency hiding.
 
@@ -225,14 +223,13 @@ __global__ void independentOps(float* data, int n) {
 **How to run**:
 ```bash
 make independent_ops
-./independent_ops_sm100
 ```
 
 ---
 
-### 4. `threshold_naive.cu` → `threshold_predicated.cu` - Warp Divergence
+### 4. `[CUDA file]` (see source files for implementation) → `[CUDA file]` (see source files for implementation) - Warp Divergence
 
-#### Problem: `threshold_naive.cu`
+#### Problem: `[CUDA file]` (see source files for implementation)
 
 **Warp divergence**: Threads in warp take different branches → Serialized execution.
 
@@ -254,7 +251,7 @@ __global__ void thresholdNaive(const float* in, float* out, int n, float thresho
 
 **Performance**: ~50% throughput (both paths executed for all threads).
 
-#### Optimized: `threshold_predicated.cu`
+#### Optimized: `[CUDA file]` (see source files for implementation)
 
 **Solution**: Use predication to avoid branching.
 
@@ -284,15 +281,13 @@ __global__ void thresholdPredicated(const float* in, float* out, int n, float th
 **How to run**:
 ```bash
 make threshold_naive threshold_predicated
-./threshold_naive_sm100
-./threshold_predicated_sm100
 ```
 
 ---
 
 ## PyTorch Examples
 
-### 5. `occupancy_pytorch.py` - PyTorch Occupancy Analysis
+###  PyTorch Occupancy Analysis
 
 **Purpose**: Show how PyTorch kernel launches affect occupancy.
 
@@ -310,10 +305,10 @@ y = torch.nn.functional.relu(x)  # Much better!
 
 **How to run**:
 ```bash
-python3 occupancy_pytorch.py
+python3 [script]
 ```
 
-### 6. `ilp_pytorch.py` - ILP in PyTorch Operations
+###  ILP in PyTorch Operations
 
 **Purpose**: Demonstrate batching for ILP.
 
@@ -328,7 +323,7 @@ batched_input = torch.cat([batch] * 8)
 result = model(batched_input)  # 8x faster!
 ```
 
-### 7. `warp_divergence_pytorch.py` - Conditional Execution
+###  Conditional Execution
 
 **Purpose**: Show impact of conditional operations in PyTorch.
 
@@ -404,25 +399,12 @@ pip install -r requirements.txt
 make
 
 # Run occupancy tuning
-./occupancy_tuning_sm100
-
-# Run loop unrolling comparison
-./loop_unrolling_sm100
-
-# Run independent ops
-./independent_ops_sm100
-
-# Run warp divergence examples
-./threshold_naive_sm100
-./threshold_predicated_sm100
-
-# Profile to see occupancy
-../../common/profiling/profile_cuda.sh ./loop_unrolling baseline
+../.[executable]/profiling/profile_cuda.sh [executable] baseline
 
 # PyTorch examples
-python3 occupancy_pytorch.py
-python3 ilp_pytorch.py
-python3 warp_divergence_pytorch.py
+python3 [script]
+python3 [script]
+python3 [script]
 ```
 
 ---
@@ -480,7 +462,7 @@ python3 warp_divergence_pytorch.py
 
 ## Next Steps
 
-**Learn kernel efficiency & fusion** → [Chapter 9: Kernel Efficiency & Arithmetic Intensity](../ch9/README.md)
+**Learn kernel efficiency & fusion** → [Chapter 9: Kernel Efficiency & Arithmetic Intensity](.[executable]/README.md)
 
 Learn about:
 - Fusing multiple operations into single kernel
@@ -488,7 +470,7 @@ Learn about:
 - CUTLASS for optimized GEMM
 - Inline PTX for low-level control
 
-**Jump to tensor cores** → [Chapter 10: Tensor Cores and Pipelines](../ch10/README.md)
+**Jump to tensor cores** → [Chapter 10: Tensor Cores and Pipelines](.[executable]/README.md)
 
 ---
 

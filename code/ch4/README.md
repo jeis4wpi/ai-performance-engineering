@@ -18,8 +18,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 2: NVIDIA GPU Hardware](../ch2/README.md) - NVLink architecture
-- [Chapter 3: System Tuning](../ch3/README.md) - NUMA binding
+- [Chapter 2: NVIDIA GPU Hardware](.[executable]/[file]) - NVLink architecture
+- [Chapter 3: System Tuning](.[executable]/[file]) - NUMA binding
 
 **Required**: 2+ GPUs (examples designed for 8x NVIDIA GPU)
 
@@ -27,7 +27,7 @@ After completing this chapter, you can:
 
 ### Core Multi-GPU Examples
 
-### 1. `training_8xb200_pipeline.py` - Full Training Pipeline
+###  Full Training Pipeline
 
 **Purpose**: Production-ready 8-GPU training with tensor and pipeline parallelism.
 
@@ -40,22 +40,22 @@ After completing this chapter, you can:
 **How to run**:
 ```bash
 # 8 GPUs, tensor parallel = 2, pipeline parallel = 2, data parallel = 2
-torchrun --nproc_per_node=8 training_8xb200_pipeline.py --tp-size 2 --pp-size 2
+torchrun [script] --tp-size 2 --pp-size 2
 
 # Benchmark mode (no actual training, measure throughput)
-torchrun --nproc_per_node=8 training_8xb200_pipeline.py --benchmark
+torchrun [script] --benchmark
 ```
 
 **Expected scaling**:
 - **Single GPU**: 100 samples/sec
 - **8 GPUs (ideal)**: 800 samples/sec (8x)
-- **8 GPUs (realistic)**: 700 samples/sec (7x) - 87.5% efficiency [OK]
+- **8 GPUs (realistic)**: 700 samples/sec (7x) - [file]% efficiency [OK]
 
 **Why not 8x?** Communication overhead, load imbalance, and synchronization reduce ideal scaling.
 
 ---
 
-### 2. `nccl_benchmark.py` - NCCL Collective Benchmarks
+###  NCCL Collective Benchmarks
 
 **Purpose**: Measure raw NCCL performance for AllReduce, AllGather, ReduceScatter.
 
@@ -68,23 +68,23 @@ torchrun --nproc_per_node=8 training_8xb200_pipeline.py --benchmark
 
 **How to run**:
 ```bash
-torchrun --nproc_per_node=8 nccl_benchmark.py --size 1GB
+torchrun [script] --size 1GB
 ```
 
-**Expected performance (NVIDIA GPU NVLink 5.0)**:
+**Expected performance (NVIDIA GPU NVLink [file])**:
 ```
-AllReduce (1 GB):     273.5 GB/s  [OK] Excellent
+AllReduce (1 GB):     [file] GB/s  [OK] Excellent
 AllGather (1 GB):     285 GB/s
 ReduceScatter (1 GB): 270 GB/s
 Broadcast (1 GB):     310 GB/s
 P2P (1 GB):           250 GB/s  (per link)
 ```
 
-**Interpretation**: 273.5 GB/s AllReduce is excellent! This is the bottleneck for gradient synchronization in DDP.
+**Interpretation**: [file] GB/s AllReduce is excellent! This is the bottleneck for gradient synchronization in DDP.
 
 ---
 
-### 3. `bandwidth_benchmark_suite_8gpu.py` - Comprehensive Bandwidth Test
+###  Comprehensive Bandwidth Test
 
 **Purpose**: Test all GPU-to-GPU communication patterns and identify topology bottlenecks.
 
@@ -96,7 +96,7 @@ P2P (1 GB):           250 GB/s  (per link)
 
 **How to run**:
 ```bash
-python3 bandwidth_benchmark_suite_8gpu.py --output bandwidth_results.json
+python3 [script] --output [file]
 ```
 
 **Expected output**:
@@ -106,7 +106,7 @@ GPU 0 <-> GPU 1: 250 GB/s (NVLink)
 GPU 0 <-> GPU 4: 245 GB/s (NVSwitch)
 GPU 0 <-> GPU 7: 240 GB/s (NVSwitch)
 
-All-to-All Bandwidth: 185 GB/s/GPU (aggregate 1.48 TB/s)
+All-to-All Bandwidth: 185 GB/s/GPU (aggregate [file] TB/s)
 ```
 
 **Use case**: Identify slow links before training. Replace cables if bandwidth < 230 GB/s.
@@ -137,26 +137,26 @@ Communication Pattern:
     AllGather           → NVSHMEM (< 1MB), NCCL (> 1MB)
 ```
 
-#### Performance Characteristics (8x NVIDIA GPU, NVLink 5.0)
+#### Performance Characteristics (8x NVIDIA GPU, NVLink [file])
 
 | Operation | Message Size | NVSHMEM | NCCL | Speedup |
 |-----------|--------------|---------|------|---------|
-| P2P Transfer | 1 KB | 0.8 μs | 12 μs | **15x** |
-| P2P Transfer | 100 KB | 45 μs | 60 μs | 1.3x |
+| P2P Transfer | 1 KB | [file] μs | 12 μs | **15x** |
+| P2P Transfer | 100 KB | 45 μs | 60 μs | [file] |
 | AllReduce | 1 KB | 5 μs | 15 μs | **3x** |
-| AllReduce | 1 MB | 200 μs | 150 μs | 0.75x |
-| AllReduce | 100 MB | 830 μs | 715 μs | 0.86x |
+| AllReduce | 1 MB | 200 μs | 150 μs | [file] |
+| AllReduce | 100 MB | 830 μs | 715 μs | [file] |
 
 **Key takeaway**: NVSHMEM is **10-15x faster** for small messages (<1MB), NCCL is **10-20% faster** for large messages (>10MB).
 
 ---
 
-### 4. `nvshmem_8gpu_examples.cu` - NVSHMEM Basics
+###  NVSHMEM Basics
 
 **Purpose**: Demonstrate PARTITIONED GLOBAL ADDRESS SPACE (PGAS) programming model.
 
 **Why NVSHMEM?**
-- **Lower latency** than NCCL for small transfers (<1 MB): **0.8 μs vs 12 μs**
+- **Lower latency** than NCCL for small transfers (<1 MB): **[file] μs vs 12 μs**
 - **One-sided communication**: No receiver involvement needed
 - **Fine-grained**: Put/get at byte granularity
 - **Zero-copy access**: Direct remote memory reads
@@ -172,25 +172,25 @@ Communication Pattern:
 **How to run**:
 ```bash
 # With NVSHMEM installed
-make nvshmem_8gpu_examples
-nvshmemrun -np 8 ./nvshmem_8gpu_examples
+make
+nvshmemrun -np 8 [executable]
 
 # Or with MPI
-mpirun -np 8 ./nvshmem_8gpu_examples
+mpirun -np 8 [executable]
 
 # Conceptual mode (without NVSHMEM)
-nvcc -O3 -std=c++17 -arch=modern compute capability nvshmem_8gpu_examples.cu -o nvshmem_8gpu_examples_demo
-./nvshmem_8gpu_examples_demo
+nvcc -O3 -std=c++17 -arch=modern compute capability [file] -o nvshmem_8gpu_examples_demo
+[executable]
 ```
 
 **Expected latency**:
-- **NVSHMEM put (1 KB)**: ~0.8 μs
+- **NVSHMEM put (1 KB)**: ~[file] μs
 - **NCCL send (1 KB)**: ~12 μs
 - **Speedup**: **15x** for small messages [OK]
 
 ---
 
-### 5. `nvshmem_tensor_parallel.cu` - Tensor Parallelism with NVSHMEM
+###  Tensor Parallelism with NVSHMEM
 
 **Purpose**: Implement tensor-parallel GEMM using NVSHMEM for weight synchronization.
 
@@ -211,8 +211,8 @@ nvshmem_barrier_all();  // Sync before next layer
 
 **How to run**:
 ```bash
-make nvshmem_tensor_parallel
-nvshmemrun -np 8 ./nvshmem_tensor_parallel --test all
+make
+nvshmemrun -np 8 [executable] --test all
 ```
 
 **When to use NVSHMEM over NCCL**:
@@ -223,7 +223,7 @@ nvshmemrun -np 8 ./nvshmem_tensor_parallel --test all
 
 ---
 
-### 6. `nvshmem_training_patterns.py` - PyTorch + NVSHMEM Hybrid
+###  PyTorch + NVSHMEM Hybrid
 
 **Purpose**: Combine PyTorch (for compute) with NVSHMEM (for custom communication).
 
@@ -238,10 +238,10 @@ nvshmemrun -np 8 ./nvshmem_tensor_parallel --test all
 **How to run**:
 ```bash
 # Custom gradient sync (for small models)
-torchrun --nproc_per_node=8 nvshmem_training_patterns.py --pattern gradient
+torchrun [script] --pattern gradient
 
 # All patterns with benchmarking
-torchrun --nproc_per_node=8 nvshmem_training_patterns.py --pattern all --benchmark
+torchrun [script] --pattern all --benchmark
 ```
 
 **Performance targets**:
@@ -251,15 +251,15 @@ torchrun --nproc_per_node=8 nvshmem_training_patterns.py --pattern all --benchma
 
 ---
 
-### 7. `symmetric_memory_8gpu.py` - Symmetric Memory Model
+###  Symmetric Memory Model
 
-**Purpose**: Use CUDA 12.x+ symmetric memory for efficient multi-GPU access.
+**Purpose**: Use CUDA [file]+ symmetric memory for efficient multi-GPU access.
 
 **What is symmetric memory?**
 - All GPUs map same virtual address to different physical memory
 - Simplifies multi-GPU algorithms (no address translation)
 - Enables efficient producer-consumer patterns
-- PyTorch 2.9+ native support via `torch.distributed.nn.SymmetricMemory`
+- PyTorch [file]+ native support via `[file].[file]`
 
 **Data structures available**:
 - Distributed tensors (large tensors sharded across GPUs)
@@ -268,7 +268,7 @@ torchrun --nproc_per_node=8 nvshmem_training_patterns.py --pattern all --benchma
 
 **How to run**:
 ```bash
-torchrun --nproc_per_node=8 symmetric_memory_8gpu.py
+torchrun [script]
 ```
 
 **Use case**: Custom parallel algorithms, distributed hash tables, sparse embeddings, multi-tenant inference with adapter switching.
@@ -279,15 +279,15 @@ torchrun --nproc_per_node=8 symmetric_memory_8gpu.py
 
 **Additional NVSHMEM Resources**:
 - All CUDA examples support both NVSHMEM and conceptual modes
-- Compilation: `nvcc -O3 -std=c++17 -arch=modern compute capability -DUSE_NVSHMEM -I$NVSHMEM_HOME/include -L$NVSHMEM_HOME/lib -lnvshmem file.cu`
-- Run: `nvshmemrun -np 8 ./executable` or `mpirun -np 8 ./executable`
-- All Python examples use PyTorch 2.9+ `torch.distributed.nn.SymmetricMemory`
+- Compilation: [source file]
+- Run: `nvshmemrun -np 8 [executable]` or `mpirun -np 8 [executable]`
+- All Python examples use PyTorch [file]+ `[file].[file]`
 
 ---
 
 ### Parallelism Strategies
 
-### 8. `before_dataparallel.py` → `after_ddp.py`
+### 8. [source file] → [source file]
 
 **Purpose**: Compare naive DataParallel vs optimized DistributedDataParallel.
 
@@ -304,24 +304,24 @@ torchrun --nproc_per_node=8 symmetric_memory_8gpu.py
 **How to run**:
 ```bash
 # Baseline (slow)
-python3 before_dataparallel.py
+python3 [script]
 
 # Optimized (fast)
-torchrun --nproc_per_node=8 after_ddp.py
+torchrun [script]
 ```
 
 **Expected improvement**: **3-5x** on 8 GPUs (DataParallel scales poorly)
 
 ---
 
-### 9. `before_no_overlap.py` → `after_overlap_ddp.py`
+### 9. [source file] → [source file]
 
 **Purpose**: Enable gradient bucketing and overlapped communication.
 
 **Optimization**: DDP buckets gradients and overlaps AllReduce with backward pass.
 
 ```python
-# Enable gradient bucketing (default in PyTorch 2.x)
+# Enable gradient bucketing (default in PyTorch [file])
 model = DDP(model, bucket_cap_mb=25, gradient_as_bucket_view=True)
 ```
 
@@ -329,15 +329,15 @@ model = DDP(model, bucket_cap_mb=25, gradient_as_bucket_view=True)
 
 **How to run**:
 ```bash
-torchrun --nproc_per_node=8 before_no_overlap.py  # No bucketing
-torchrun --nproc_per_node=8 after_overlap_ddp.py  # With bucketing
+torchrun [script]  # No bucketing
+torchrun [script]  # With bucketing
 ```
 
 ---
 
 ### Specialized Examples
 
-### 10. `multi_node_blackwell.py` - Multi-Node Training
+###  Multi-Node Training
 
 **Purpose**: Extend to multiple nodes via InfiniBand or RoCE.
 
@@ -345,11 +345,11 @@ torchrun --nproc_per_node=8 after_overlap_ddp.py  # With bucketing
 ```bash
 # Node 0
 torchrun --nnodes=2 --node_rank=0 --master_addr=node0 \
-         --nproc_per_node=8 multi_node_blackwell.py
+         --nproc_per_node=8 [file]
 
 # Node 1
 torchrun --nnodes=2 --node_rank=1 --master_addr=node0 \
-         --nproc_per_node=8 multi_node_blackwell.py
+         --nproc_per_node=8 [file]
 ```
 
 **Expected cross-node bandwidth**:
@@ -375,12 +375,12 @@ Efficiency = Actual_Speedup / Ideal_Speedup
 | Configuration | Throughput | Scaling | Efficiency |
 |---------------|------------|---------|------------|
 | 1 GPU | 120 samples/sec | 1x | 100% |
-| 2 GPUs (DP) | 230 samples/sec | 1.92x | 96% [OK] |
-| 4 GPUs (DP) | 440 samples/sec | 3.67x | 92% [OK] |
-| 8 GPUs (DP) | 840 samples/sec | 7.0x | 87.5% [OK] |
-| 8 GPUs (TP=2, PP=2, DP=2) | 780 samples/sec | 6.5x | 81% [OK] |
+| 2 GPUs (DP) | 230 samples/sec | [file] | 96% [OK] |
+| 4 GPUs (DP) | 440 samples/sec | [file] | 92% [OK] |
+| 8 GPUs (DP) | 840 samples/sec | [file] | [file]% [OK] |
+| 8 GPUs (TP=2, PP=2, DP=2) | 780 samples/sec | [file] | 81% [OK] |
 
-**87.5% efficiency on 8 GPUs is excellent!** Realistic target for well-tuned training.
+**[file]% efficiency on 8 GPUs is excellent!** Realistic target for well-tuned training.
 
 ### Communication vs Computation Ratio
 
@@ -393,7 +393,7 @@ comm_time = time_in_allreduce
 
 comm_ratio = comm_time / (compute_time + comm_time)
 
-# Target: comm_ratio < 0.2 (20%)
+# Target: comm_ratio < [file] (20%)
 ```
 
 **How to reduce communication overhead**:
@@ -410,26 +410,26 @@ comm_ratio = comm_time / (compute_time + comm_time)
 cd ch4
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -r [file]
 
 # 1. Verify NCCL is working
-./check_nccl.sh
+[executable].sh
 
 # 2. Benchmark NCCL collectives
-torchrun --nproc_per_node=8 nccl_benchmark.py
+torchrun [script]
 
 # 3. Test bandwidth between all GPU pairs
-python3 bandwidth_benchmark_suite_8gpu.py
+python3 [script]
 
 # 4. Run training examples
-torchrun --nproc_per_node=8 after_ddp.py
+torchrun [script]
 
 # 5. Full pipeline with tensor+pipeline parallelism
-torchrun --nproc_per_node=8 training_8xb200_pipeline.py --tp-size 2 --pp-size 2
+torchrun [script] --tp-size 2 --pp-size 2
 
 # 6. NVSHMEM examples (requires NVSHMEM installation)
 make
-shmrun -np 8 ./nvshmem_8gpu_examples
+shmrun -np 8 [executable]
 ```
 
 ---
@@ -457,11 +457,11 @@ shmrun -np 8 ./nvshmem_8gpu_examples
 ## Common Pitfalls
 
 ### Pitfall 1: Using DataParallel Instead of DDP
-**Problem**: `nn.DataParallel` scales poorly (GIL contention, unbalanced load).
+**Problem**: `[file]` scales poorly (GIL contention, unbalanced load).
 
 **Solution**: Always use `DistributedDataParallel`:
 ```python
-model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank])
+model = [file].[file](model, device_ids=[local_rank])
 ```
 
 ### Pitfall 2: Forgetting to Enable P2P Access
@@ -485,14 +485,14 @@ nvidia-smi topo -m
 ```python
 for micro_batch in range(gradient_accumulation_steps):
     loss = model(input) / gradient_accumulation_steps
-    loss.backward()  # Accumulate gradients
-optimizer.step()  # Single AllReduce for all micro-batches
+    [file]()  # Accumulate gradients
+[file]()  # Single AllReduce for all micro-batches
 ```
 
 ### Pitfall 4: Not Overlapping Communication
 **Problem**: Synchronous AllReduce after backward → wasted time.
 
-**Solution**: Enable bucketing (default in PyTorch 2.x):
+**Solution**: Enable bucketing (default in PyTorch [file]):
 ```python
 model = DDP(model, bucket_cap_mb=25)
 ```
@@ -502,7 +502,7 @@ model = DDP(model, bucket_cap_mb=25)
 
 **Solution**: Set explicitly:
 ```bash
-export NCCL_TOPO_FILE=/path/to/topology.xml
+export NCCL_TOPO_FILE=/path/to/[file]
 # Or for debugging:
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=INIT,GRAPH
@@ -512,23 +512,23 @@ export NCCL_DEBUG_SUBSYS=INIT,GRAPH
 
 ## Next Steps
 
-**Continue learning** → [Chapter 5: Storage and IO Optimization](../ch5/README.md)
+**Continue learning** → [Chapter 5: Storage and IO Optimization](.[executable]/[file])
 
 Learn about:
 - GPUDirect Storage (GDS) for fast data loading
 - Eliminating IO bottlenecks
 - Optimizing DataLoader pipelines
 
-**Jump to CUDA basics** → [Chapter 6: Your First CUDA Kernel](../ch6/README.md)
+**Jump to CUDA basics** → [Chapter 6: Your First CUDA Kernel](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **NCCL Documentation**: [NCCL Developer Guide](https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/)
-- **NVSHMEM Documentation**: [NVSHMEM Docs](https://docs.nvidia.com/hpc-sdk/nvshmem/)
-- **PyTorch DDP Tutorial**: [Getting Started with DDP](https://pytorch.org/tutorials/intermediate/ddp_tutorial.html)
-- **Tensor Parallelism**: [Megatron-LM Paper](https://arxiv.org/abs/1909.08053)
+- **NCCL Documentation**: [NCCL Developer Guide](https://[file].com/deeplearning/nccl/user-guide/docs/)
+- **NVSHMEM Documentation**: [NVSHMEM Docs](https://[file].com/hpc-sdk/nvshmem/)
+- **PyTorch DDP Tutorial**: [Getting Started with DDP](https://[file]/tutorials/intermediate/[file])
+- **Tensor Parallelism**: [Megatron-LM Paper](https://[file]/abs/[file])
 
 ---
 

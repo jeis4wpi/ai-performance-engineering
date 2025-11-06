@@ -41,7 +41,7 @@ class BenchmarkConfig:
     device: Optional[torch.device] = None
     enable_profiling: bool = False  # Enable nsys/ncu/PyTorch profiler
     profiling_output_dir: Optional[str] = None  # Directory for profiling outputs
-    timeout_seconds: int = 15  # Required timeout for benchmark execution in seconds (prevents hangs)
+    timeout_seconds: int = 15  # Required timeout for benchmark execution in seconds (prevents hangs) - DEFAULT 15s
     # Note: Setup/teardown (including compilation) are not subject to timeout,
     # but should complete within reasonable time or fail with error
 
@@ -158,10 +158,17 @@ class BenchmarkHarness:
             nonlocal times_ms, memory_peak_mb, memory_allocated_mb, profiling_outputs, errors
             
             try:
-                # Setup - this may include CUDA extension compilation
-                # Note: Compilation happens here and may take time, but is not subject to timeout
-                # The timeout applies to the actual benchmark execution
+                # Setup - this may include CUDA extension compilation OR torch.compile()
+                # IMPORTANT: Setup MUST complete quickly or timeout will occur
+                # torch.compile() compilation can hang - timeout will catch it
+                # If setup takes longer than timeout, it will be killed by the outer timeout
+                import signal
+                import time
+                start_time = time.time()
                 benchmark.setup()
+                setup_time = time.time() - start_time
+                if setup_time > config.timeout_seconds * 0.8:  # Warn if setup takes >80% of timeout
+                    print(f"  WARNING: Setup took {setup_time:.1f}s (near timeout limit)")
                 
                 # Warmup
                 self._warmup(benchmark.benchmark_fn, config.warmup)
@@ -216,7 +223,7 @@ class BenchmarkHarness:
             finally:
                 execution_result["done"] = True
         
-        print(f"Running benchmark with {config.timeout_seconds}s timeout...")
+        # Only print timeout message if timeout actually occurs (not upfront)
         thread = threading.Thread(target=run_with_result, daemon=True)
         thread.start()
         thread.join(timeout=config.timeout_seconds)
@@ -234,13 +241,22 @@ class BenchmarkHarness:
             
             errors.append(f"TIMEOUT: Benchmark exceeded timeout of {config.timeout_seconds} seconds")
             times_ms = []
-            # Cleanup on timeout
+            # Aggressive cleanup on timeout - CUDA operations can hang
             try:
                 benchmark.teardown()
             except:
                 pass
+            # Force CUDA cleanup - critical after timeout
             if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+                try:
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize()
+                    torch.cuda.ipc_collect()  # Clean up IPC resources
+                    torch.cuda.reset_peak_memory_stats()  # Reset stats
+                except:
+                    pass
+            gc.collect()
+            # Force another GC pass to clean up any remaining references
             gc.collect()
         elif execution_result["error"]:
             errors.append(f"Benchmark execution error: {str(execution_result['error'])}")

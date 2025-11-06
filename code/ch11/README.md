@@ -18,8 +18,8 @@ After completing this chapter, you can:
 ## Prerequisites
 
 **Previous chapters**:
-- [Chapter 6: CUDA Basics](../ch6/README.md) - kernel launches
-- [Chapter 10: Pipelines](../ch10/README.md) - async patterns
+- [Chapter 6: CUDA Basics](.[executable]/[file]) - kernel launches
+- [Chapter 10: Pipelines](.[executable]/[file]) - async patterns
 
 **Required**: Understanding of asynchronous execution model
 
@@ -43,235 +43,6 @@ Stream 2:          [H2D #2] → [Kernel #2] → [D2H #2]
 ```
 
 **Typical speedup**: **2-3x** for independent operations.
-
----
-
-## Examples
-
-### 1. `basic_streams.cu` - Stream Basics
-
-**Purpose**: Demonstrate fundamental stream operations and concurrency.
-
-#### No Streams (Baseline)
-
-```cpp
-// All operations in default stream (serial)
-cudaMemcpy(d_data, h_data, size, cudaMemcpyHostToDevice);
-kernel<<<blocks, threads>>>(d_data);
-cudaMemcpy(h_result, d_result, size, cudaMemcpyDeviceToHost);
-
-// Timeline: [H2D] → [Kernel] → [D2H]  (serial)
-// Time: 10ms + 20ms + 10ms = 40ms
-```
-
-#### With Streams (Optimized)
-
-```cpp
-const int NUM_STREAMS = 4;
-cudaStream_t streams[NUM_STREAMS];
-
-// Create streams
-for (int i = 0; i < NUM_STREAMS; i++) {
-    cudaStreamCreate(&streams[i]);
-}
-
-// Launch operations in different streams
-for (int i = 0; i < NUM_STREAMS; i++) {
-    int offset = i * chunk_size;
-    
-    // All async operations
-    cudaMemcpyAsync(d_data + offset, h_data + offset, chunk_size,
-                    cudaMemcpyHostToDevice, streams[i]);
-    
-    kernel<<<blocks, threads, 0, streams[i]>>>(d_data + offset);
-    
-    cudaMemcpyAsync(h_result + offset, d_result + offset, chunk_size,
-                    cudaMemcpyDeviceToHost, streams[i]);
-}
-
-// Wait for all streams
-for (int i = 0; i < NUM_STREAMS; i++) {
-    cudaStreamSynchronize(streams[i]);
-}
-
-// Timeline (with overlap):
-// Stream 0: [H2D #0] → [Kernel #0] → [D2H #0]
-// Stream 1:     [H2D #1] → [Kernel #1] → [D2H #1]
-// Stream 2:          [H2D #2] → [Kernel #2] → [D2H #2]
-// Stream 3:               [H2D #3] → [Kernel #3] → [D2H #3]
-//
-// Time: max(H2D, Kernel, D2H) ≈ 20ms (vs 40ms)
-// Speedup: 2x!
-```
-
-**How to run**:
-```bash
-make basic_streams
-./basic_streams_sm100
-```
-
-**Expected output**:
-```
-Without streams: 42.3 ms
-With 4 streams: 21.7 ms
-Speedup: 1.95x [OK]
-```
-
----
-
-### 2. `stream_ordered_allocator.cu` - Stream-Ordered Memory
-
-**Purpose**: Use stream-ordered allocations for zero-synchronization memory management.
-
-**Problem with cudaMalloc**:
-```cpp
-cudaMalloc(&ptr, size);  // Synchronizes entire device!
-// All streams blocked until allocation completes
-```
-
-**Solution with stream-ordered allocator**:
-```cpp
-// Allocate in stream (no global sync!)
-cudaMallocAsync(&ptr, size, stream);
-
-// Use immediately in same stream
-kernel<<<blocks, threads, 0, stream>>>(ptr);
-
-// Free in stream (deferred until kernel completes)
-cudaFreeAsync(ptr, stream);
-
-// No synchronization needed!
-```
-
-**Benefits**:
-- [OK] No device-wide synchronization
-- [OK] Deferred frees (safe even if kernels still running)
-- [OK] Memory pool reuse (faster allocations)
-- [OK] Better concurrency
-
-**Example**:
-
-```cpp
-cudaStream_t stream;
-cudaStreamCreate(&stream);
-
-for (int iter = 0; iter < 100; iter++) {
-    float *d_temp;
-    
-    // Allocate (async, no sync)
-    cudaMallocAsync(&d_temp, size, stream);
-    
-    // Use
-    process<<<blocks, threads, 0, stream>>>(d_temp);
-    
-    // Free (deferred, no sync)
-    cudaFreeAsync(d_temp, stream);
-}
-
-cudaStreamSynchronize(stream);  // Single sync at end
-```
-
-**Speedup**: **3-5x** for workloads with frequent allocations.
-
-**How to run**:
-```bash
-make stream_ordered_allocator
-./stream_ordered_allocator_sm100
-```
-
----
-
-### 3. `warp_specialized_pipeline_multistream.cu` - Multi-Stream Pipeline
-
-**Purpose**: Combine warp specialization (Ch10) with multi-stream execution for maximum throughput.
-
-**Pattern**: Multiple streams, each with producer/consumer warps.
-
-```cpp
-const int NUM_STREAMS = 4;
-
-__global__ void multi_stream_warp_specialized(
-    float** inputs,   // Array of input pointers (one per stream)
-    float** outputs,  // Array of output pointers
-    int stream_id
-) {
-    int warp_id = threadIdx.x / 32;
-    
-    if (warp_id < 2) {
-        // Producer warps: Load data for this stream
-        load_data_async(inputs[stream_id], smem[stream_id]);
-    } else {
-        // Consumer warps: Process data
-        process_data(smem[stream_id], outputs[stream_id]);
-    }
-}
-
-// Launch multiple streams
-for (int i = 0; i < NUM_STREAMS; i++) {
-    multi_stream_warp_specialized<<<blocks, threads, 0, streams[i]>>>(
-        inputs, outputs, i
-    );
-}
-```
-
-**Throughput**: **3-4x** higher than single-stream (perfect overlap).
-
-**How to run**:
-```bash
-make warp_specialized_pipeline_multistream
-./warp_specialized_pipeline_multistream_sm100
-```
-
-**CLI parameters**:
-
-`warp_specialized_pipeline_multistream_sm100` now accepts runtime flags so you can sweep pipeline pressure without editing source:
-
-```bash
-./warp_specialized_pipeline_multistream_sm100 \
-  --streams 4 \
-  --batches 12 \
-  --batch-elems 131072 \
-  --release-threshold-gib 1.5
-```
-
-- `--streams <int>`: number of CUDA streams/buffers to rotate (default 3)
-- `--batches <int>`: mini-batches to process (default 9)
-- `--batch-elems <int>`: elements per batch (default 65,536)
-- `--release-threshold-gib <float>`: stream-ordered allocator release threshold in GiB (default 2.0)
-- `--skip-verify`: skip host-side correctness check for faster experimentation
-
-Use `--help` to see the full flag list.
-
----
-
-### 4. `warp_specialized_two_pipelines_multistream.cu` - Advanced Multi-Pipeline
-
-**Purpose**: Run two independent pipelines concurrently using different streams.
-
-**Use case**: 
-- Pipeline 1: Inference prefill (large batch, low latency priority)
-- Pipeline 2: Inference decode (small batch, high throughput priority)
-
-```cpp
-// Pipeline 1: Prefill (stream 0)
-prefill<<<prefill_blocks, threads, 0, streams[0]>>>(
-    tokens, kv_cache, attention_output
-);
-
-// Pipeline 2: Decode (stream 1) - concurrent!
-decode<<<decode_blocks, threads, 0, streams[1]>>>(
-    prev_tokens, kv_cache, next_token
-);
-
-// Both pipelines run simultaneously
-// GPU efficiently switches between them
-```
-
-**How to run**:
-```bash
-make warp_specialized_two_pipelines_multistream
-./warp_specialized_two_pipelines_multistream_sm100
-```
 
 ---
 
@@ -349,8 +120,9 @@ batch_processing<<<..., low_priority>>>(...);  // Yields to high-priority
 Use Nsight Systems to visualize concurrency:
 
 ```bash
-../../common/profiling/profile_cuda.sh ./basic_streams baseline
-nsys-ui ../../results/ch11/basic_streams_*.nsys-rep
+# Profile a CUDA binary (replace with actual binary name)
+../.[executable]/profiling/[file] [executable] baseline
+nsys-ui ../.[executable]/ch11/your_binary_*.nsys-rep
 ```
 
 **Look for**:
@@ -362,11 +134,11 @@ nsys-ui ../../results/ch11/basic_streams_*.nsys-rep
 
 | Configuration | Throughput | Stream Efficiency |
 |---------------|------------|-------------------|
-| No streams | 1.0x | 0% (serial) |
-| 2 streams | 1.6x | 60% |
-| 4 streams | 2.3x | 77% [OK] |
-| 8 streams | 2.7x | 84% [OK] |
-| 16 streams | 2.9x | 86% [OK] |
+| No streams | [file] | 0% (serial) |
+| 2 streams | [file] | 60% |
+| 4 streams | [file] | 77% [OK] |
+| 8 streams | [file] | 84% [OK] |
+| 16 streams | [file] | 86% [OK] |
 
 **Diminishing returns**: Beyond 8 streams, little benefit (overhead increases).
 
@@ -377,20 +149,17 @@ nsys-ui ../../results/ch11/basic_streams_*.nsys-rep
 ```bash
 cd ch11
 
-# Build all examples
+# Install dependencies
+pip install -r [file]
+
+# Run baseline/optimized comparisons
+python3 [script]  # Compares all baseline/optimized pairs
+
+# Build CUDA examples (if available)
 make
 
-# Run stream examples
-./basic_streams_sm100                                      # Stream basics
-./stream_ordered_allocator_sm100                           # Async allocation
-./warp_specialized_pipeline_multistream_sm100              # Single pipeline (add flags, e.g. --streams 4)
-./warp_specialized_two_pipelines_multistream_sm100         # Dual pipelines
-
-# Profile to see concurrency
-../../common/profiling/profile_cuda.sh ./basic_streams baseline
-
-# View timeline
-nsys-ui ../../results/ch11/basic_streams_*.nsys-rep
+# Profile examples (replace with actual binary names)
+# ../.[executable]/profiling/[file] [executable] baseline
 ```
 
 ---
@@ -482,7 +251,7 @@ cudaStreamDestroy(stream);  // Don't forget!
 
 ## Next Steps
 
-**CUDA Graphs for ultra-low latency** → [Chapter 12: CUDA Graphs](../ch12/README.md)
+**CUDA Graphs for ultra-low latency** → [Chapter 12: CUDA Graphs](.[executable]/[file])
 
 Learn about:
 - Graph capture for repeatable workloads
@@ -490,16 +259,16 @@ Learn about:
 - Dynamic parallelism
 - Sub-microsecond kernel launches
 
-**Back to pipelines** → [Chapter 10: Tensor Cores and Pipelines](../ch10/README.md)
+**Back to pipelines** → [Chapter 10: Tensor Cores and Pipelines](.[executable]/[file])
 
 ---
 
 ## Additional Resources
 
-- **CUDA Streams**: [Programming Guide - Streams](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#streams)
-- **Stream-Ordered Allocations**: [cudaMallocAsync Documentation](https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html)
-- **Nsight Systems**: [Stream Analysis](https://docs.nvidia.com/nsight-systems/UserGuide/index.html)
-- **Hyper-Q**: [Multi-Process Service](https://docs.nvidia.com/deploy/mps/index.html)
+- **CUDA Streams**: [Programming Guide - Streams](https://[file].com/cuda/cuda-c-programming-guide/[file]#streams)
+- **Stream-Ordered Allocations**: [cudaMallocAsync Documentation](https://[file].com/cuda/cuda-runtime-api/[file])
+- **Nsight Systems**: [Stream Analysis](https://[file].com/nsight-systems/UserGuide/[file])
+- **Hyper-Q**: [Multi-Process Service](https://[file].com/deploy/mps/[file])
 
 ---
 

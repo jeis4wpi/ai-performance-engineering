@@ -1,0 +1,33 @@
+autoscale:
+  decode:
+    max_replicas: 24
+    min_replicas: 8
+    scale_down:
+      kv_cache_usage: 30
+      queue_length: 4
+    scale_up:
+      kv_cache_usage: 75
+      queue_length: 16
+  prefill:
+    max_replicas: 12
+    min_replicas: 4
+    scale_down:
+      gpu_utilization: 40
+      queue_length: 2
+    scale_up:
+      gpu_utilization: 80
+      queue_length: 8
+cache:
+  min_cache_hit_ratio: 0.75
+  reuse_prefix: true
+model: llama-70b
+qos:
+  enable_early_rejection: true
+  low_priority_threshold_ms: 500
+  reject_on_slo_violation: true
+split_policy:
+  decode_load_weight: 0.5
+  enable_hotspot_prevention: true
+  prefix_cache_weight: 10.0
+  prompt_length_threshold: 256
+  queue_length_weight: 1.5

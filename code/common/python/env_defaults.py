@@ -17,7 +17,7 @@ ENV_DEFAULTS: Dict[str, str] = {
     "NCCL_SHM_DISABLE": "0",
     "CUDA_DEVICE_MAX_CONNECTIONS": "1",
     "TORCH_COMPILE_DEBUG": "0",
-    "TORCH_LOGS": "+dynamo",
+    # "TORCH_LOGS": "",  # Disabled - remove verbose dynamo logging to reduce noise
     "CUDA_HOME": "/usr/local/cuda-13.0",
 }
 
